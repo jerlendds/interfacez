@@ -36,7 +36,10 @@ function createIntro() {
   render(
     section,
     html`<h1>Nodebody</h1>
-      <p>Evolving the graph workspace</p>`,
+      <p>
+        Notice, name, and navigate local-first knowledge systems for malleable
+        thinking.
+      </p>`,
   );
 
   const start = el("div", "nb-welcome__block");

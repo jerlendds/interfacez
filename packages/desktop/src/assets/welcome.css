@@ -19,7 +19,7 @@
 .nb-welcome p {
   margin: 0 0 24px;
   color: var(--nb-foreground);
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .nb-welcome h2 {
