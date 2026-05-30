@@ -1,4 +1,9 @@
-import type { PaneModel, Component, ComponentThemeInput } from "@nodebody/ui";
+import type {
+  PaneModel,
+  Component,
+  ComponentThemeInput,
+  DropdownSelectEventDetail,
+} from "@nodebody/ui";
 import {
   Scope,
   signal,
@@ -7,6 +12,7 @@ import {
   createPaneGroup,
   disposable,
   getContextMenuManager,
+  getHotkeyManager,
   graphFolderIcon,
   applyComponentTheme,
 } from "@nodebody/ui";
@@ -110,7 +116,31 @@ export function workbench(options: WorkbenchOptions = {}): Component {
           const action = target.getAttribute("data-window-action");
           if (action === "minimize") window.win.minimize();
           if (action === "maximize") window.win.maximize();
-          if (action === "close") window.win.close();
+          if (action === "close") closeWindow();
+        }),
+      );
+
+      const onDropdownSelect = (event: Event) => {
+        const detail = (event as CustomEvent<DropdownSelectEventDetail>).detail;
+        if (detail?.id === "file.exit") closeWindow();
+      };
+      root.addEventListener("dropdown:select", onDropdownSelect as EventListener);
+      scope.add(
+        disposable(() => {
+          root.removeEventListener(
+            "dropdown:select",
+            onDropdownSelect as EventListener,
+          );
+        }),
+      );
+
+      scope.add(
+        getHotkeyManager().registerGlobal({
+          id: "workbench.file.exit",
+          key: "Ctrl-Q",
+          priority: 1_000,
+          allowInEditable: true,
+          run: closeWindow,
         }),
       );
 
@@ -126,6 +156,10 @@ export function workbench(options: WorkbenchOptions = {}): Component {
       );
     },
   };
+}
+
+function closeWindow() {
+  window.win.close();
 }
 
 function registerPaneContextMenus(root: ParentNode, scope: Scope) {

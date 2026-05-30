@@ -38,6 +38,10 @@
   -webkit-app-region: no-drag;
 }
 
+.nb-toolbar__titlebar-menu {
+  position: relative;
+}
+
 .nb-toolbar__titlebar[hidden] {
   display: none;
 }
@@ -57,8 +61,11 @@
 }
 
 .nb-toolbar__titlebar-item:hover,
-.nb-toolbar__titlebar-item:focus-visible {
+.nb-toolbar__titlebar-item:focus-visible,
+.nb-toolbar__titlebar-item.is-open {
   outline: 0;
+  background: var(--nb-darkest);
+  color: var(--nb-bright);
 }
 
 .nb-toolbar__brand-icon {

@@ -4,6 +4,12 @@ import { disposable } from "../../../ui/src/base/disposable";
 import { html, render, type TrustedHtml } from "../../../ui/src/base/html";
 import { getHotkeyManager } from "../../../ui/src/base/hotkeys";
 import {
+  attachDropdown,
+  dropdownSeparator,
+  type DropdownController,
+  type DropdownItem,
+} from "../../../ui/src/components/dropdown";
+import {
   arrowNarrowLeftIcon,
   arrowNarrowRightIcon,
   cmdIcon,
@@ -58,6 +64,23 @@ const brandTooltipPhrases = [
   "Somebody left a Nodebody in the graph!",
 ] as const;
 
+const fileMenuItems: readonly DropdownItem[] = [
+  { id: "file.newTextFile", label: "New Text File", accelerator: "Ctrl+N" },
+  { id: "file.newFile", label: "New File..." },
+  dropdownSeparator(),
+  { id: "file.openFile", label: "Open File" },
+  { id: "file.openFolder", label: "Open Folder" },
+  { id: "file.openRecent", label: "Open Recent", type: "submenu", items: [] },
+  dropdownSeparator(),
+  { id: "file.save", label: "Save" },
+  { id: "file.saveAs", label: "Save As..." },
+  dropdownSeparator(),
+  { id: "file.autoSave", label: "Auto Save" },
+  { id: "file.preferences", label: "Preferences" },
+  dropdownSeparator(),
+  { id: "file.exit", label: "Exit", accelerator: "Ctrl+Q" },
+];
+
 /// Create the workbench toolbar used as the draggable Electron chrome.
 /// Buttons expose data attributes only; command wiring lives outside.
 export function createToolbar(scope: Scope) {
@@ -91,11 +114,23 @@ export function createToolbar(scope: Scope) {
   titlebarMenu.hidden = true;
 
   const menuItems = ["File", "Edit", "View", "Help"] as const;
+  let fileDropdown: DropdownController | undefined;
   for (const label of menuItems) {
+    const item = el("div", "nb-toolbar__titlebar-menu");
     const button = el("button", "nb-toolbar__titlebar-item", label);
     button.type = "button";
     button.dataset.titlebarFunction = label.toLowerCase();
-    titlebarMenu.append(button);
+    item.append(button);
+    titlebarMenu.append(item);
+
+    if (label === "File") {
+      fileDropdown = attachDropdown({
+        trigger: button,
+        items: fileMenuItems,
+        scope,
+        ariaLabel: "File menu",
+      });
+    }
   }
 
   const center = el("div", "nb-toolbar__center");
@@ -152,6 +187,7 @@ export function createToolbar(scope: Scope) {
     titlebarMenu.hidden = !open;
     titlebarMenu.setAttribute("aria-hidden", String(!open));
     root.classList.toggle("nb-toolbar--titlebar-open", open);
+    if (!open) fileDropdown?.close();
   };
 
   scope.add(
@@ -169,6 +205,7 @@ export function createToolbar(scope: Scope) {
   const onDocumentPointerDown = (event: PointerEvent) => {
     const path = event.composedPath();
     if (path.includes(root)) return;
+    if (fileDropdown && path.includes(fileDropdown.element)) return;
     setTitlebarMenuOpen(false);
   };
   document.addEventListener("pointerdown", onDocumentPointerDown, true);
