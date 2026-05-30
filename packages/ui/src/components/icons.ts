@@ -1,0 +1,172 @@
+import { html } from "../base/html";
+
+import aiAgentSvg from "../icons/ai-agent.svg?raw";
+import pencilSearchSvg from "../icons/pencil-search.svg?raw";
+import bulbSvg from "../icons/bulb.svg?raw";
+import wordmarkSvg from "../icons/wordmark.svg?raw";
+import abcSvg from "../icons/abc.svg?raw";
+import stopwatchSvg from "../icons/stopwatch.svg?raw";
+import cogSvg from "../icons/cog.svg?raw";
+import aiGeneratedCodeV2Svg from "../icons/ai-generated-code--v2.svg?raw";
+import alienSvg from "../icons/alien.svg?raw";
+import arrowNarrowLeftSvg from "../icons/arrow-narrow-left.svg?raw";
+import arrowNarrowRightSvg from "../icons/arrow-narrow-right.svg?raw";
+import artificialIntelligenceSvg from "../icons/artificial-intelligence.svg?raw";
+import attachSvg from "../icons/attach.svg?raw";
+import audioWaveSvg from "../icons/audio-wave.svg?raw";
+import barcodeSvg from "../icons/barcode.svg?raw";
+import bookmarkRibbonSvg from "../icons/bookmark-ribbon.svg?raw";
+import botSvg from "../icons/bot.svg?raw";
+import brainSvg from "../icons/brain.svg?raw";
+import calendarSvg from "../icons/calendar.svg?raw";
+import chainSvg from "../icons/chain.svg?raw";
+import chatSvg from "../icons/chat.svg?raw";
+import checkmarkSvg from "../icons/checkmark.svg?raw";
+import christmasCandleSvg from "../icons/christmas-candle.svg?raw";
+import codeFileSvg from "../icons/code-file.svg?raw";
+import codeForkSvg from "../icons/code-fork.svg?raw";
+import comboChartSvg from "../icons/combo-chart.svg?raw";
+import conferenceCallSvg from "../icons/conference-call.svg?raw";
+import confettiSvg from "../icons/confetti.svg?raw";
+import connectedSvg from "../icons/connected.svg?raw";
+import consoleSvg from "../icons/console.svg?raw";
+import detectiveSvg from "../icons/detective.svg?raw";
+import diffFilesSvg from "../icons/diff-files.svg?raw";
+import documentBodySvg from "../icons/document-body.svg?raw";
+import easelSvg from "../icons/easel.svg?raw";
+import eventLogSvg from "../icons/event-log.svg?raw";
+import externalLinkSvg from "../icons/external-link.svg?raw";
+import folderTreeSvg from "../icons/folder-tree.svg?raw";
+import globeSvg from "../icons/globe.svg?raw";
+import googleFormsSvg from "../icons/google-forms.svg?raw";
+import helpSvg from "../icons/help.svg?raw";
+import homeSvg from "../icons/home.svg?raw";
+import inspectCodeSvg from "../icons/inspect-code.svg?raw";
+import intelligentWebsiteSvg from "../icons/intelligent-website.svg?raw";
+import leafSvg from "../icons/leaf.svg?raw";
+import lightSvg from "../icons/light.svg?raw";
+import logoSvg from "../icons/logo.svg?raw";
+import messageBotSvg from "../icons/message-bot.svg?raw";
+import microphoneSvg from "../icons/microphone.svg?raw";
+import mindMapSvg from "../icons/mind-map.svg?raw";
+import minusSvg from "../icons/minus.svg?raw";
+import overviewPages4Svg from "../icons/overview-pages-4.svg?raw";
+import pagelinesSvg from "../icons/pagelines.svg?raw";
+import paintBrushSvg from "../icons/paint-brush.svg?raw";
+import pictureSvg from "../icons/picture.svg?raw";
+import pinSvg from "../icons/pin.svg?raw";
+import plusSvg from "../icons/plus.svg?raw";
+import policyDocumentSvg from "../icons/policy-document.svg?raw";
+import pulseSvg from "../icons/pulse.svg?raw";
+import qrCodeSvg from "../icons/qr-code.svg?raw";
+import sdSvg from "../icons/sd.svg?raw";
+import graphFolderSvg from "../icons/graph-folder-icon.svg?raw";
+import signingADocumentSvg from "../icons/signing-a-document.svg?raw";
+import smsSvg from "../icons/sms.svg?raw";
+import spaceshipLaunchDocumentationSvg from "../icons/spaceship-launch-documentation.svg?raw";
+import stepLengthSvg from "../icons/step-length.svg?raw";
+import tagsSvg from "../icons/tags.svg?raw";
+import thinTestTubeSvg from "../icons/thin-test-tube.svg?raw";
+import trashSvg from "../icons/trash.svg?raw";
+import userShieldSvg from "../icons/user-shield.svg?raw";
+import videoSvg from "../icons/video.svg?raw";
+import windowMaximizeSvg from "../icons/window-maximize.svg?raw";
+import workflowSvg from "../icons/workflow.svg?raw";
+import cmdSvg from "../icons/command.svg?raw";
+import xSvg from "../icons/x.svg?raw";
+
+function icon(svg: string) {
+  return html`${withCurrentColor(svg)}`;
+}
+
+function withCurrentColor(svg: string) {
+  const root = svg.match(/^<svg\b[^>]*>/)?.[0];
+  if (!root) return svg;
+
+  let nextRoot = root;
+  if (!/\bcolor=/.test(nextRoot)) {
+    nextRoot = nextRoot.replace("<svg", '<svg color="currentColor"');
+  }
+  if (!/\bfill=/.test(nextRoot)) {
+    nextRoot = nextRoot.replace("<svg", '<svg fill="currentColor"');
+  }
+
+  return svg.replace(root, nextRoot);
+}
+
+export const abcIcon = icon(abcSvg);
+export const aiAgentIcon = icon(aiAgentSvg);
+export const aiGeneratedCodeV2Icon = icon(aiGeneratedCodeV2Svg);
+export const alienIcon = icon(alienSvg);
+export const arrowNarrowLeftIcon = icon(arrowNarrowLeftSvg);
+export const arrowNarrowRightIcon = icon(arrowNarrowRightSvg);
+export const artificialIntelligenceIcon = icon(artificialIntelligenceSvg);
+export const attachIcon = icon(attachSvg);
+export const audioWaveIcon = icon(audioWaveSvg);
+export const bulbIcon = icon(bulbSvg);
+export const barcodeIcon = icon(barcodeSvg);
+export const bookmarkRibbonIcon = icon(bookmarkRibbonSvg);
+export const botIcon = icon(botSvg);
+export const brainIcon = icon(brainSvg);
+export const calendarIcon = icon(calendarSvg);
+export const chainIcon = icon(chainSvg);
+export const chatIcon = icon(chatSvg);
+export const checkmarkIcon = icon(checkmarkSvg);
+export const christmasCandleIcon = icon(christmasCandleSvg);
+export const codeFileIcon = icon(codeFileSvg);
+export const codeForkIcon = icon(codeForkSvg);
+export const cogIcon = icon(cogSvg);
+export const cmdIcon = icon(cmdSvg);
+export const comboChartIcon = icon(comboChartSvg);
+export const conferenceCallIcon = icon(conferenceCallSvg);
+export const confettiIcon = icon(confettiSvg);
+export const connectedIcon = icon(connectedSvg);
+export const consoleIcon = icon(consoleSvg);
+export const detectiveIcon = icon(detectiveSvg);
+export const diffFilesIcon = icon(diffFilesSvg);
+export const documentBodyIcon = icon(documentBodySvg);
+export const easelIcon = icon(easelSvg);
+export const eventLogIcon = icon(eventLogSvg);
+export const externalLinkIcon = icon(externalLinkSvg);
+export const folderTreeIcon = icon(folderTreeSvg);
+export const globeIcon = icon(globeSvg);
+export const googleFormsIcon = icon(googleFormsSvg);
+export const helpIcon = icon(helpSvg);
+export const homeIcon = icon(homeSvg);
+export const inspectCodeIcon = icon(inspectCodeSvg);
+export const intelligentWebsiteIcon = icon(intelligentWebsiteSvg);
+export const leafIcon = icon(leafSvg);
+export const lightIcon = icon(lightSvg);
+export const logoIcon = icon(logoSvg);
+export const messageBotIcon = icon(messageBotSvg);
+export const microphoneIcon = icon(microphoneSvg);
+export const mindMapIcon = icon(mindMapSvg);
+export const minusIcon = icon(minusSvg);
+export const overviewPages4Icon = icon(overviewPages4Svg);
+export const pagelinesIcon = icon(pagelinesSvg);
+export const paintBrushIcon = icon(paintBrushSvg);
+export const pictureIcon = icon(pictureSvg);
+export const pinIcon = icon(pinSvg);
+export const plusIcon = icon(plusSvg);
+export const policyDocumentIcon = icon(policyDocumentSvg);
+export const pulseIcon = icon(pulseSvg);
+export const pencilSearchIcon = icon(pencilSearchSvg);
+export const qrCodeIcon = icon(qrCodeSvg);
+export const sdIcon = icon(sdSvg);
+export const graphFolderIcon = icon(graphFolderSvg);
+export const signingADocumentIcon = icon(signingADocumentSvg);
+export const smsIcon = icon(smsSvg);
+export const spaceshipLaunchDocumentationIcon = icon(
+  spaceshipLaunchDocumentationSvg,
+);
+export const stepLengthIcon = icon(stepLengthSvg);
+export const tagsIcon = icon(tagsSvg);
+export const thinTestTubeIcon = icon(thinTestTubeSvg);
+export const trashIcon = icon(trashSvg);
+export const userShieldIcon = icon(userShieldSvg);
+export const videoIcon = icon(videoSvg);
+export const windowMaximizeIcon = icon(windowMaximizeSvg);
+export const workflowIcon = icon(workflowSvg);
+export const xIcon = icon(xSvg);
+export const wordmarkIcon = icon(wordmarkSvg);
+export const stopwatchIcon = icon(stopwatchSvg);

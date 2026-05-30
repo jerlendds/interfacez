@@ -1,0 +1,14 @@
+{
+  "name": "nodebody",
+  "version": "1.0.0",
+  "description": "Built by Nodebody, for everybody, because Nodebody should be alone in the graph",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "author": {
+    "name": "jerlendds",
+    "url": "https://github.com/jerlendds/nodebody"
+  },
+  "keywords": ["nodebody"]
+}

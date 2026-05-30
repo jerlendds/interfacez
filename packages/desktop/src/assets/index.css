@@ -1,0 +1,51 @@
+@import "fonts.css";
+@import "sidebar.css";
+@import "statusbar.css";
+@import "tabbar.css";
+@import "toolbar.css";
+@import "welcome.css";
+
+.nb-workbench {
+  --nb-toolbar-height: 32px;
+  --nb-tab-height: 28px;
+  --nb-statusbar-height: 22px;
+  --nb-sidebar-width: 32px;
+  --nb-background: #11131b;
+  --nb-surface: #151720;
+  --nb-toolbar: #11131b;
+  --nb-sidebar: #11131b;
+  --nb-tabbar: #11131b;
+  --nb-active-tab: #151720;
+  --nb-statusbar: #11131b;
+  --nb-border: #0a0c13;
+  --nb-bright: #bec3e0;
+  --nb-foreground: #a9aecb;
+  --nb-ink: #8d92ad;
+  --nb-muted: #747891;
+  --nb-subtle: #525468;
+  --nb-dim: #242633;
+  --nb-dark: #181a25;
+  --nb-darkest: #101118;
+  --nb-accent: #2a84f8;
+  --nb-accent-soft: #0074f8;
+
+  display: grid;
+  grid-template:
+    "toolbar toolbar" var(--nb-toolbar-height)
+    "sidebar panes" minmax(0, 1fr)
+    "status status" var(--nb-statusbar-height) /
+    var(--nb-sidebar-width) minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-width: 640px;
+  background: var(--nb-background);
+  color: var(--nb-foreground);
+}
+
+.nb-workbench--sidebar-right {
+  grid-template:
+    "toolbar toolbar" var(--nb-toolbar-height)
+    "panes sidebar" minmax(0, 1fr)
+    "status status" var(--nb-statusbar-height) /
+    minmax(0, 1fr) var(--nb-sidebar-width);
+}

@@ -1,0 +1,27 @@
+.nb-tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 260px;
+  padding: 6px 8px;
+  border: 1px solid var(--nb-border);
+  border-radius: 4px;
+  background: var(--nb-statusbar);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 32%);
+  color: var(--nb-foreground);
+  font-size: 12px;
+  line-height: 1.35;
+  opacity: 0.7;
+  pointer-events: none;
+  transform: scale(0.8);
+  transform-origin: center;
+  transition:
+    opacity 140ms ease,
+    transform 160ms ease;
+  white-space: normal;
+  -webkit-app-region: no-drag;
+}
+
+.nb-tooltip.is-visible {
+  opacity: 1;
+  transform: scale(1);
+}

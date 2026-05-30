@@ -1,0 +1,37 @@
+.nb-statusbar {
+  grid-area: status;
+  display: flex;
+  align-items: center;
+  height: var(--nb-statusbar-height);
+  padding: 0;
+  background: var(--nb-statusbar);
+  border-top: 1px solid var(--nb-border);
+  color: var(--nb-muted);
+  font-size: 12px;
+}
+
+.nb-statusbar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  padding: 0 6px;
+  line-height: var(--nb-statusbar-height);
+  white-space: nowrap;
+  transition: background 120ms ease;
+}
+
+.nb-statusbar__item:hover {
+  background: #0b0d14;
+}
+
+.nb-statusbar__item svg {
+  width: 13px;
+  height: 13px;
+  color: var(--nb-muted);
+  transition: color 120ms ease;
+}
+
+.nb-statusbar__item:hover svg {
+  color: #ff5db8;
+}

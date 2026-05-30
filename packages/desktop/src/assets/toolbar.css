@@ -1,0 +1,161 @@
+.nb-toolbar {
+  grid-area: toolbar;
+  display: grid;
+  grid-template-columns: minmax(44px, 1fr) auto minmax(86px, 1fr);
+  align-items: center;
+  gap: 8px;
+  height: var(--nb-toolbar-height);
+  padding: 2px 3px;
+  background: var(--nb-toolbar);
+  border-bottom: 1px solid var(--nb-border);
+  -webkit-app-region: drag;
+}
+
+.nb-toolbar__brand {
+  position: relative;
+  justify-self: start;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: var(--nb-muted);
+  line-height: 0;
+  -webkit-app-region: no-drag;
+}
+
+.nb-toolbar__brand-icon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+}
+
+.nb-toolbar__brand-icon--graph {
+  opacity: 1;
+  transform: scale(1);
+  color: var(--nb-accent-soft);
+  transition:
+    opacity 120ms ease,
+    transform 0ms linear 120ms;
+}
+
+.nb-toolbar__brand-icon--logo {
+  opacity: 0;
+  transform: scale(0);
+  transition:
+    opacity 140ms ease,
+    transform 180ms ease;
+}
+
+.nb-toolbar__brand:hover .nb-toolbar__brand-icon--graph {
+  opacity: 0;
+  transform: scale(0);
+  transition:
+    opacity 120ms ease 1200ms,
+    transform 0ms linear 1320ms;
+}
+
+.nb-toolbar__brand:hover .nb-toolbar__brand-icon--logo {
+  opacity: 1;
+  transform: scale(1);
+  transition-delay: 1200ms;
+}
+
+.nb-toolbar__brand svg {
+  width: 16px;
+  height: 16px;
+}
+
+.nb-toolbar__center {
+  justify-self: center;
+  display: grid;
+  grid-template-columns: auto minmax(260px, 360px);
+  align-items: center;
+  gap: 8px;
+}
+
+.nb-toolbar__history,
+.nb-toolbar__actions {
+  display: flex;
+  gap: 4px;
+}
+
+.nb-toolbar__actions {
+  justify-content: flex-end;
+}
+
+.nb-tool-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--nb-muted);
+  cursor: default;
+  line-height: 0;
+  -webkit-app-region: no-drag;
+}
+
+.nb-tool-button:hover {
+  background: #242636;
+  color: var(--nb-accent);
+}
+
+.nb-tool-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.nb-command-palette {
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--nb-dim);
+  border-radius: 4px;
+  background: var(--nb-dark);
+  color: var(--nb-ink);
+  -webkit-app-region: no-drag;
+}
+
+.nb-command-palette__content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  height: 100%;
+}
+
+.nb-command-palette__hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.nb-command-palette__shortcut {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 6px);
+  display: grid;
+  place-items: center;
+  color: #6d7393;
+  line-height: 0;
+  transform: translateY(-50%);
+}
+
+.nb-command-palette__shortcut svg {
+  width: 13px;
+  height: 13px;
+}

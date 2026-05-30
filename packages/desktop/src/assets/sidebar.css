@@ -1,0 +1,78 @@
+.nb-sidebar {
+  grid-area: sidebar;
+  justify-self: stretch;
+  min-height: 0;
+  background: var(--nb-sidebar);
+  border-right: 1px solid var(--nb-border);
+}
+
+.nb-workbench--sidebar-right .nb-sidebar {
+  border-right: 0;
+  border-left: 1px solid var(--nb-border);
+}
+
+.nb-sidebar__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  min-height: 0;
+  padding: 7px 0px;
+}
+
+.nb-sidebar__items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.nb-sidebar__items--bottom {
+  margin-top: auto;
+}
+
+/* fixes visual alignment of first graph folder icon */
+.nb-sidebar__items:first-child {
+  padding-right: 3px;
+}
+
+.nb-icon-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--nb-subtle);
+  cursor: default;
+  line-height: 0;
+  -webkit-app-region: no-drag;
+}
+
+.nb-icon-button:hover {
+  color: var(--nb-accent);
+}
+
+.nb-icon-button.is-active {
+  color: var(--nb-muted);
+}
+
+.nb-icon-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.nb-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  background: #395da4;
+  color: white;
+  font-size: 10px;
+  line-height: 14px;
+}
