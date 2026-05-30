@@ -30,7 +30,7 @@ const defaultActivities = [
     id: "home",
     label: "Home",
     icon: graphFolderIcon,
-    tooltip: "Nodebody's home",
+    tooltip: "Xplorer",
   },
 ];
 

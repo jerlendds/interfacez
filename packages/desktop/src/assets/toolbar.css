@@ -26,7 +26,6 @@
   place-items: center;
   width: 24px;
   height: 24px;
-  color: var(--nb-muted);
   line-height: 0;
   -webkit-app-region: no-drag;
 }
@@ -59,8 +58,6 @@
 
 .nb-toolbar__titlebar-item:hover,
 .nb-toolbar__titlebar-item:focus-visible {
-  background: var(--nb-darkest);
-  color: var(--nb-bright);
   outline: 0;
 }
 
@@ -70,6 +67,7 @@
   display: grid;
   place-items: center;
   transform-origin: center;
+  cursor: default;
 }
 
 .nb-toolbar__brand-icon--graph {
@@ -137,7 +135,7 @@
   border-radius: 4px;
   background: transparent;
   color: var(--nb-muted);
-  cursor: default;
+  cursor: pointer;
   line-height: 0;
   -webkit-app-region: no-drag;
 }

@@ -46,7 +46,7 @@
   border-radius: 4px;
   background: transparent;
   color: var(--nb-subtle);
-  cursor: default;
+  cursor: pointer;
   line-height: 0;
   -webkit-app-region: no-drag;
 }
