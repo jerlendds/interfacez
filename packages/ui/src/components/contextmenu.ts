@@ -73,11 +73,14 @@ export class ContextMenuController implements Disposable {
   private readonly keyboardOpenKeys: readonly string[];
 
   private hoverTimer: number | undefined;
+  private contextMenuFallbackTimer: number | undefined;
   private hoveredElement: HTMLElement | undefined;
   private focusedElement: HTMLElement | undefined;
   private activeRequestId = 0;
+  private contextMenuEventVersion = 0;
 
   private readonly onContextMenuBound = this.onContextMenu.bind(this);
+  private readonly onPointerDownBound = this.onPointerDown.bind(this);
   private readonly onPointerOverBound = this.onPointerOver.bind(this);
   private readonly onPointerOutBound = this.onPointerOut.bind(this);
   private readonly onFocusInBound = this.onFocusIn.bind(this);
@@ -94,6 +97,10 @@ export class ContextMenuController implements Disposable {
     this.root.addEventListener("contextmenu", this.onContextMenuBound, {
       capture: true,
       passive: false,
+    });
+    this.root.addEventListener("pointerdown", this.onPointerDownBound, {
+      capture: true,
+      passive: true,
     });
     this.root.addEventListener("focusin", this.onFocusInBound, {
       capture: true,
@@ -135,6 +142,7 @@ export class ContextMenuController implements Disposable {
   dispose(): void {
     this.clearHoverTimer();
     this.root.removeEventListener("contextmenu", this.onContextMenuBound, true);
+    this.root.removeEventListener("pointerdown", this.onPointerDownBound, true);
     this.root.removeEventListener("pointerover", this.onPointerOverBound, true);
     this.root.removeEventListener("pointerout", this.onPointerOutBound, true);
     this.root.removeEventListener("focusin", this.onFocusInBound, true);
@@ -167,9 +175,10 @@ export class ContextMenuController implements Disposable {
   private onContextMenu(event: Event): void {
     const mouseEvent = event as MouseEvent;
     const target = event.target;
-    if (!(target instanceof Element)) return;
+    this.contextMenuEventVersion += 1;
+    this.clearContextMenuFallbackTimer();
 
-    const resolved = this.resolveScope(target);
+    const resolved = this.resolveScopeForEvent(mouseEvent);
     if (!resolved) return;
 
     event.preventDefault();
@@ -186,6 +195,34 @@ export class ContextMenuController implements Disposable {
     });
   }
 
+  private onPointerDown(event: Event): void {
+    const pointerEvent = event as PointerEvent;
+    if (pointerEvent.button !== 2) return;
+
+    const version = this.contextMenuEventVersion;
+    this.clearContextMenuFallbackTimer();
+    this.contextMenuFallbackTimer = window.setTimeout(() => {
+      this.contextMenuFallbackTimer = undefined;
+      if (version !== this.contextMenuEventVersion) return;
+
+      const resolved = this.resolveScopeForPoint(
+        pointerEvent.clientX,
+        pointerEvent.clientY,
+      );
+      if (!resolved) return;
+
+      void this.show(resolved, {
+        trigger: "mouse",
+        target: eventTargetElement(pointerEvent.target),
+        anchor: { x: pointerEvent.clientX, y: pointerEvent.clientY },
+        shiftKey: pointerEvent.shiftKey,
+        ctrlKey: pointerEvent.ctrlKey,
+        altKey: pointerEvent.altKey,
+        metaKey: pointerEvent.metaKey,
+      });
+    }, 80);
+  }
+
   private onKeyDown(event: Event): void {
     const keyEvent = event as KeyboardEvent;
     const opensByKey = this.keyboardOpenKeys.includes(keyEvent.key);
@@ -193,7 +230,6 @@ export class ContextMenuController implements Disposable {
     if (!opensByKey && !opensByShiftF10) return;
 
     const target = keyEvent.target;
-    if (!(target instanceof Element)) return;
 
     const resolved = this.resolveScope(this.focusedElement ?? target);
     if (!resolved) return;
@@ -215,7 +251,6 @@ export class ContextMenuController implements Disposable {
   private onPointerOver(event: Event): void {
     const pointerEvent = event as PointerEvent;
     const target = event.target;
-    if (!(target instanceof Element)) return;
 
     const resolved = this.resolveScope(target);
     if (!resolved) return;
@@ -239,7 +274,6 @@ export class ContextMenuController implements Disposable {
 
   private onPointerOut(event: Event): void {
     const target = event.target;
-    if (!(target instanceof Element)) return;
 
     const resolved = this.resolveScope(target);
     if (resolved && this.hoveredElement === resolved.element) {
@@ -250,14 +284,12 @@ export class ContextMenuController implements Disposable {
 
   private onFocusIn(event: Event): void {
     const target = event.target;
-    if (!(target instanceof Element)) return;
 
     this.focusedElement = this.resolveScope(target)?.element;
   }
 
   private onFocusOut(event: Event): void {
     const target = event.target;
-    if (!(target instanceof Element)) return;
 
     const resolved = this.resolveScope(target);
     if (resolved && this.focusedElement === resolved.element) {
@@ -297,13 +329,14 @@ export class ContextMenuController implements Disposable {
     await scope.runAction(action.id, menuEvent);
   }
 
-  private resolveScope(start: Element): RegisteredScope | undefined {
-    let node: Element | null = start;
+  private resolveScope(start: EventTarget | null): RegisteredScope | undefined {
+    let node = elementFromEventTarget(start);
+    let resolved: RegisteredScope | undefined;
 
     while (node) {
       if (node instanceof HTMLElement) {
         const scope = this.scopes.get(node);
-        if (scope) return { element: node, scope };
+        if (scope) resolved = { element: node, scope };
       }
 
       if (node.parentElement) {
@@ -320,13 +353,43 @@ export class ContextMenuController implements Disposable {
       break;
     }
 
-    return undefined;
+    return resolved;
+  }
+
+  private resolveScopeForEvent(event: MouseEvent): RegisteredScope | undefined {
+    let resolved: RegisteredScope | undefined;
+
+    for (const target of event.composedPath()) {
+      const candidate = this.resolveScope(target);
+      if (candidate) resolved = candidate;
+    }
+
+    if (resolved) return resolved;
+
+    return this.resolveScopeForPoint(event.clientX, event.clientY);
+  }
+
+  private resolveScopeForPoint(x: number, y: number): RegisteredScope | undefined {
+    let resolved: RegisteredScope | undefined;
+
+    for (const target of document.elementsFromPoint(x, y)) {
+      const candidate = this.resolveScope(target);
+      if (candidate) resolved = candidate;
+    }
+
+    return resolved;
   }
 
   private clearHoverTimer(): void {
     if (this.hoverTimer === undefined) return;
     window.clearTimeout(this.hoverTimer);
     this.hoverTimer = undefined;
+  }
+
+  private clearContextMenuFallbackTimer(): void {
+    if (this.contextMenuFallbackTimer === undefined) return;
+    window.clearTimeout(this.contextMenuFallbackTimer);
+    this.contextMenuFallbackTimer = undefined;
   }
 }
 
@@ -335,16 +398,31 @@ export function anchorForElement(element: HTMLElement): ContextMenuAnchor {
   return { x: rect.left, y: rect.bottom };
 }
 
-function eventTargetElement(target: Element): HTMLElement {
-  if (target instanceof HTMLElement) return target;
+function eventTargetElement(target: EventTarget | null): HTMLElement {
+  const element = elementFromEventTarget(target);
+  if (!element) return document.documentElement;
+  if (element instanceof HTMLElement) return element;
 
-  let node: Element | null = target;
+  let node: Element | null = element.parentElement;
   while (node) {
     if (node instanceof HTMLElement) return node;
     node = node.parentElement;
   }
 
   return document.documentElement;
+}
+
+function elementFromEventTarget(target: EventTarget | null): Element | null {
+  if (target instanceof Element) return target;
+  if (!(target instanceof Node)) return null;
+
+  const parent = target.parentElement;
+  if (parent) return parent;
+
+  const root = target.getRootNode();
+  if (root instanceof ShadowRoot && root.host instanceof Element) return root.host;
+
+  return null;
 }
 
 let globalContextMenuController: ContextMenuController | undefined;

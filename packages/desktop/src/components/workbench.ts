@@ -5,6 +5,7 @@ import {
   mount,
   delegate,
   createPaneGroup,
+  disposable,
   getContextMenuManager,
   graphFolderIcon,
   applyComponentTheme,
@@ -92,7 +93,7 @@ export function workbench(options: WorkbenchOptions = {}): Component {
               panes.set(closeTab(panes.get(), paneId, tabId)),
           });
           paneMount.replaceChildren(paneGroup);
-          registerPaneSurfaceContextMenus(paneGroup, paneScope);
+          registerPaneContextMenus(paneGroup, paneScope);
         }),
       );
 
@@ -127,15 +128,13 @@ export function workbench(options: WorkbenchOptions = {}): Component {
   };
 }
 
-function registerPaneSurfaceContextMenus(root: ParentNode, scope: Scope) {
+function registerPaneContextMenus(root: ParentNode, scope: Scope) {
   const manager = getContextMenuManager();
-  for (const surface of root.querySelectorAll<HTMLElement>(
-    ".nb-pane__surface",
-  )) {
+  for (const pane of root.querySelectorAll<HTMLElement>(".nb-pane")) {
     scope.add(
-      manager.register(surface, {
+      manager.register(pane, {
         getActions() {
-          const hasSelection = selectedTextIn(surface).length > 0;
+          const hasSelection = selectedTextIn(pane).length > 0;
           return [
             {
               id: "copy",
@@ -150,10 +149,43 @@ function registerPaneSurfaceContextMenus(root: ParentNode, scope: Scope) {
 
         async runAction(actionId) {
           if (actionId !== "copy") return;
-          const text = selectedTextIn(surface);
+          const text = selectedTextIn(pane);
           if (!text) return;
           await copyText(text);
         },
+      }),
+    );
+
+    const show = (event: MouseEvent | PointerEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void manager.showForElement(
+        pane,
+        "mouse",
+        { x: event.clientX, y: event.clientY },
+        event,
+      );
+    };
+    const onContextMenu = (event: MouseEvent) => show(event);
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 2) return;
+      event.preventDefault();
+      event.stopPropagation();
+      window.setTimeout(() => show(event), 0);
+    };
+
+    pane.addEventListener("contextmenu", onContextMenu, {
+      capture: true,
+      passive: false,
+    });
+    pane.addEventListener("pointerdown", onPointerDown, {
+      capture: true,
+      passive: false,
+    });
+    scope.add(
+      disposable(() => {
+        pane.removeEventListener("contextmenu", onContextMenu, true);
+        pane.removeEventListener("pointerdown", onPointerDown, true);
       }),
     );
   }
@@ -167,8 +199,12 @@ function selectedTextIn(element: HTMLElement) {
   if (!text) return "";
 
   for (let i = 0; i < selection.rangeCount; i += 1) {
-    const range = selection.getRangeAt(i);
-    if (range.intersectsNode(element)) return text;
+    try {
+      const range = selection.getRangeAt(i);
+      if (range.intersectsNode(element)) return text;
+    } catch {
+      continue;
+    }
   }
 
   return "";
