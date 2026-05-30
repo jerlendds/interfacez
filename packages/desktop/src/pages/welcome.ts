@@ -37,8 +37,10 @@ function createIntro() {
     section,
     html`<h1>Nodebody</h1>
       <p>
-        Notice, name, and navigate local-first knowledge systems for malleable
-        thinking.
+        <!-- Novel, networked, notebooks to augment, adapt, and program your -->
+        <!-- knowledge. -->
+        Modular. Malleable. Media. Nodebody turns knowledge into a medium you
+        can shape.
       </p>`,
   );
 
