@@ -126,6 +126,7 @@ function renderStack(
     const tabbar = el("div", "nb-tabbar");
     const tabs = el("div", "nb-tabs");
     tabs.setAttribute("role", "tablist");
+    bindTabbarDropTarget(tabbar, node.id, scope, actions);
 
     let activeTabEl: HTMLElement | undefined;
     for (const tabId of node.tabIds) {
@@ -362,6 +363,52 @@ function bindContentDropTarget(
   );
 }
 
+function bindTabbarDropTarget(
+  tabbar: HTMLElement,
+  targetStackId: LayoutNodeId,
+  scope: Scope,
+  actions: LayoutSurfaceActions,
+) {
+  const onDragOver = (event: DragEvent) => {
+    if (!hasDraggedTab(event)) return;
+
+    event.preventDefault();
+    event.dataTransfer!.dropEffect = "move";
+    tabbar.dataset.dropStack = "true";
+  };
+
+  const onDragLeave = (event: DragEvent) => {
+    if (tabbar.contains(event.relatedTarget as Node | null)) return;
+    delete tabbar.dataset.dropStack;
+  };
+
+  const onDrop = (event: DragEvent) => {
+    const payload = draggedTabPayload(event);
+    if (!payload || payload.stackId === targetStackId) return;
+
+    event.preventDefault();
+    delete tabbar.dataset.dropStack;
+    actions.dispatch({
+      type: "moveTab",
+      fromStackId: payload.stackId,
+      toStackId: targetStackId,
+      tabId: payload.tabId,
+      activate: true,
+    });
+  };
+
+  tabbar.addEventListener("dragover", onDragOver);
+  tabbar.addEventListener("dragleave", onDragLeave);
+  tabbar.addEventListener("drop", onDrop);
+  scope.add(
+    disposable(() => {
+      tabbar.removeEventListener("dragover", onDragOver);
+      tabbar.removeEventListener("dragleave", onDragLeave);
+      tabbar.removeEventListener("drop", onDrop);
+    }),
+  );
+}
+
 function hasDraggedTab(event: DragEvent): boolean {
   return Array.from(event.dataTransfer?.types ?? []).includes(tabDragMime);
 }
@@ -383,11 +430,14 @@ function dropSide(surface: HTMLElement, event: DragEvent): DropSide {
   const rect = surface.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
+  const verticalBand = Math.min(96, rect.height * 0.34);
+
+  if (y <= verticalBand) return "top";
+  if (y >= rect.height - verticalBand) return "bottom";
+
   const distances = [
     ["left", x],
     ["right", rect.width - x],
-    ["top", y],
-    ["bottom", rect.height - y],
   ] as const;
 
   return distances.reduce((nearest, candidate) => {
@@ -398,6 +448,9 @@ function dropSide(surface: HTMLElement, event: DragEvent): DropSide {
 function clearDropIndicators(root: ParentNode) {
   for (const surface of root.querySelectorAll<HTMLElement>("[data-drop-side]")) {
     delete surface.dataset.dropSide;
+  }
+  for (const tabbar of root.querySelectorAll<HTMLElement>("[data-drop-stack]")) {
+    delete tabbar.dataset.dropStack;
   }
 }
 

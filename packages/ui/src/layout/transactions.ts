@@ -340,12 +340,13 @@ function moveTab(doc: LayoutDocument, tx: MoveTabTx): LayoutDocument {
   const from = stackNode(doc, tx.fromStackId);
   const to = stackNode(doc, tx.toStackId);
   if (!from || !to || !from.tabIds.includes(tx.tabId)) return doc;
+  if (tx.fromStackId === tx.toStackId) return activateTab(doc, tx.toStackId, tx.tabId);
 
   const nextFromIds = from.tabIds.filter((id) => id !== tx.tabId);
   const nextToIds = to.tabIds.filter((id) => id !== tx.tabId);
   nextToIds.splice(tx.index ?? nextToIds.length, 0, tx.tabId);
 
-  return {
+  const nextDoc: LayoutDocument = {
     ...doc,
     nodes: {
       ...doc.nodes,
@@ -364,6 +365,8 @@ function moveTab(doc: LayoutDocument, tx: MoveTabTx): LayoutDocument {
       },
     },
   };
+
+  return nextFromIds.length ? nextDoc : removeEmptyStack(nextDoc, tx.fromStackId);
 }
 
 function resizeSplit(doc: LayoutDocument, tx: ResizeSplitTx): LayoutDocument {
@@ -415,6 +418,35 @@ function replaceNodeReference(
   }
 
   return doc;
+}
+
+function removeEmptyStack(
+  doc: LayoutDocument,
+  stackId: LayoutNodeId,
+): LayoutDocument {
+  const parent = findParentSplit(doc, stackId);
+  if (!parent) return doc;
+
+  const nodes = { ...doc.nodes };
+  delete nodes[stackId];
+
+  const remainingChildIds = parent.split.childIds.filter((id) => id !== stackId);
+  if (remainingChildIds.length === 1) {
+    delete nodes[parent.split.id];
+    return replaceNodeReference(
+      { ...doc, nodes },
+      parent.split.id,
+      remainingChildIds[0],
+    );
+  }
+
+  nodes[parent.split.id] = {
+    ...parent.split,
+    childIds: remainingChildIds,
+    ratios: parent.split.ratios?.filter((_ratio, index) => index !== parent.index),
+  };
+
+  return { ...doc, nodes };
 }
 
 function stackNode(
