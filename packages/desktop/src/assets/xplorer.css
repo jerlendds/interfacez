@@ -9,7 +9,7 @@
   overflow: hidden;
   isolation: isolate;
   border-right: 1px solid var(--nb-border);
-  font-size: 12px;
+  font-size: 13px;
   transform: translateX(-100%);
   visibility: hidden;
   pointer-events: none;
@@ -108,9 +108,16 @@
 .nb-xplorer__row--folder[aria-expanded="false"] {
   color: var(--nb-subtle);
 }
+.nb-xplorer__row--folder[aria-expanded="false"]:hover {
+  color: var(--nb-muted);
+}
 
 .nb-xplorer__row--folder[aria-expanded="true"] {
   color: var(--nb-bright);
+}
+
+.nb-xplorer__row--folder[aria-expanded="true"] svg {
+  color: var(--nb-accent);
 }
 
 .nb-xplorer__row--file.nb-xplorer__row--nested:hover::before {
