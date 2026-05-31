@@ -21,11 +21,13 @@ import type { ActivityItem, SidebarSide } from "./sidebar";
 import { createSidebar } from "./sidebar";
 import { createToolbar } from "./toolbar";
 import { statusBar } from "./statusbar";
+import { createXplorer } from "./xplorer";
 
 /// Options used to assemble the default workbench shell.
 export interface WorkbenchOptions {
   sidebarSide?: SidebarSide;
   sidebarWidth?: number;
+  xplorerWidth?: number;
   activities?: ActivityItem[];
   panes?: PaneModel[];
   theme?: ComponentThemeInput;
@@ -34,9 +36,9 @@ export interface WorkbenchOptions {
 const defaultActivities = [
   {
     id: "xplorer",
-    label: "Xplorer",
+    label: "File Xplorer",
     icon: graphFolderIcon,
-    tooltip: "Xplorer",
+    tooltip: "File Xplorer",
   },
 ];
 
@@ -62,6 +64,7 @@ export function workbench(options: WorkbenchOptions = {}): Component {
     mount(root: Element, scope: Scope) {
       const side = options.sidebarSide ?? "left";
       const activeActivity = signal("home");
+      const isXplorerOpen = signal(false);
       const panes = signal<PaneModel[]>(
         clonePanes(options.panes ?? defaultPanes),
       );
@@ -72,7 +75,12 @@ export function workbench(options: WorkbenchOptions = {}): Component {
           ? {}
           : { sidebarWidth: `${options.sidebarWidth}px` }),
       });
+      (root as HTMLElement).style.setProperty(
+        "--nb-xplorer-width",
+        `${options.xplorerWidth ?? 244}px`,
+      );
       const toolbar = createToolbar(scope);
+      const xplorer = createXplorer({ width: options.xplorerWidth }, scope);
       const sidebar = createSidebar(
         {
           side,
@@ -83,7 +91,7 @@ export function workbench(options: WorkbenchOptions = {}): Component {
       );
       const paneMount = document.createElement("div");
       paneMount.className = "nb-pane-mount";
-      root.replaceChildren(toolbar, sidebar, paneMount);
+      root.replaceChildren(toolbar, sidebar, xplorer, paneMount);
       scope.add(mount(statusBar, root));
       let paneScope = scope.add(new Scope());
 
@@ -105,7 +113,14 @@ export function workbench(options: WorkbenchOptions = {}): Component {
 
       scope.add(
         delegate(root, "click", "[data-activity]", (_event, target) => {
-          activeActivity.set(target.getAttribute("data-activity") ?? "graph");
+          const activity = target.getAttribute("data-activity") ?? "graph";
+          if (activity === "xplorer") {
+            const nextOpen = !isXplorerOpen.get();
+            isXplorerOpen.set(nextOpen);
+            activeActivity.set(nextOpen ? activity : "home");
+            return;
+          }
+          activeActivity.set(activity);
         }),
       );
 
@@ -149,12 +164,21 @@ export function workbench(options: WorkbenchOptions = {}): Component {
 
       scope.add(
         activeActivity.subscribe(() => {
-          for (const item of root.querySelectorAll("[data-activity]")) {
-            item.classList.toggle(
-              "is-active",
-              item.getAttribute("data-activity") === activeActivity.get(),
-            );
-          }
+          updateActivityButtons(
+            root,
+            activeActivity.get(),
+            isXplorerOpen.get(),
+          );
+        }),
+      );
+
+      scope.add(
+        isXplorerOpen.subscribe(() => {
+          const open = isXplorerOpen.get();
+          root.classList.toggle("is-xplorer-open", open);
+          xplorer.classList.toggle("is-open", open);
+          xplorer.setAttribute("aria-hidden", String(!open));
+          updateActivityButtons(root, activeActivity.get(), open);
         }),
       );
     },
@@ -163,6 +187,20 @@ export function workbench(options: WorkbenchOptions = {}): Component {
 
 function closeWindow() {
   window.win.close();
+}
+
+function updateActivityButtons(
+  root: ParentNode,
+  activeActivity: string,
+  isXplorerOpen: boolean,
+) {
+  for (const item of root.querySelectorAll("[data-activity]")) {
+    const activity = item.getAttribute("data-activity");
+    item.classList.toggle(
+      "is-active",
+      activity === "xplorer" ? isXplorerOpen : activity === activeActivity,
+    );
+  }
 }
 
 function registerPaneContextMenus(root: ParentNode, scope: Scope) {

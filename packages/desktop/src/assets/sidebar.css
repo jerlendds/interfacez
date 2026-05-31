@@ -1,5 +1,6 @@
 .nb-sidebar {
   grid-area: sidebar;
+  z-index: 3;
   justify-self: stretch;
   min-height: 0;
   background: var(--nb-sidebar);
