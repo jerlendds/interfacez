@@ -72,6 +72,20 @@
   box-sizing: border-box;
 }
 
+.nb-md-editor .cm-nb-md-table-rendered > .cm-widgetBuffer {
+  display: none;
+}
+
+.nb-md-editor .cm-nb-md-table-separator-rendered {
+  display: block !important;
+  height: 0 !important;
+  line-height: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 2px !important;
+  box-sizing: border-box;
+}
+
 .nb-md-editor .cm-nb-md-table-row {
   display: grid !important;
   width: 100%;
@@ -84,12 +98,7 @@
 .nb-md-editor .cm-nb-md-codeblock {
   background: color-mix(in srgb, var(--nb-dark, #13151d) 82%, transparent);
   font-family:
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    "Liberation Mono",
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     monospace;
 }
 
@@ -119,8 +128,9 @@
   max-width: 100%;
   padding: 0.18em 0.8em;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   box-sizing: border-box;
+  max-height: calc(1.6em * 4 + 0.36em);
   white-space: normal;
   overflow-wrap: anywhere;
   border-top: 1px solid color-mix(in srgb, var(--nb-border) 88%, transparent);
@@ -130,16 +140,24 @@
   scrollbar-color: var(--nb-subtle) transparent;
 }
 
+.nb-md-editor .cm-nb-md-table-cell:focus {
+  outline: 1px solid var(--nb-accent);
+  outline-offset: -1px;
+  background: color-mix(in srgb, var(--nb-accent-soft) 16%, var(--nb-dark));
+}
+
 .nb-md-editor .cm-nb-md-table-cell:last-child {
   border-right: 1px solid color-mix(in srgb, var(--nb-border) 88%, transparent);
 }
 
-.nb-md-editor .cm-nb-md-table-row:not(.cm-nb-md-table-separator-row)
+.nb-md-editor
+  .cm-nb-md-table-row:not(.cm-nb-md-table-separator-row)
   .cm-nb-md-table-cell {
   border-bottom: 1px solid color-mix(in srgb, var(--nb-border) 88%, transparent);
 }
 
 .nb-md-editor .cm-nb-md-table-cell::-webkit-scrollbar {
+  width: 6px;
   height: 6px;
 }
 
@@ -160,6 +178,13 @@
   border-top: 0;
   border-bottom: 0;
   background: color-mix(in srgb, var(--nb-border) 80%, transparent);
+}
+
+.nb-md-editor .cm-nb-md-table-separator-spacer {
+  display: block;
+  width: 100%;
+  height: 0;
+  overflow: hidden;
 }
 
 .nb-md-editor .cm-nb-md-hr-rule {
@@ -186,12 +211,7 @@
 
 .nb-md-editor .cm-nb-md-inline-code {
   font-family:
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    "Liberation Mono",
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     monospace;
   background: color-mix(in srgb, var(--nb-accent-soft) 55%, transparent);
   border-radius: 4px;

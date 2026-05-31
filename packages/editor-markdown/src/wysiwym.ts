@@ -96,7 +96,11 @@ function decorateVisibleLines(
       decorateLineClass(line.from, text, active, ranges);
 
       if (tableRow) {
-        decorateRenderedTableRow(line.from, line.to, tableRow, ranges);
+        if (tableRow.separator) {
+          decorateCollapsedTableSeparator(line.from, line.to, ranges);
+        } else {
+          decorateRenderedTableRow(line.from, line.to, tableRow, ranges);
+        }
       } else if (!active && options.hideSyntaxOnInactiveLines) {
         hideLineSyntax(view, line.from, text, ranges);
 
@@ -156,11 +160,15 @@ function decorateLineClass(
   }
 
   if (/^\s*\|.+\|\s*$/.test(text)) {
+    const tableRow = !active ? parseTableRow(text) : undefined;
     ranges.push(
       Decoration.line({
-        class: active
-          ? "cm-nb-md-line cm-nb-md-table cm-nb-md-table-source"
-          : "cm-nb-md-line cm-nb-md-table cm-nb-md-table-rendered",
+        class:
+          tableRow?.separator === true
+            ? "cm-nb-md-line cm-nb-md-table cm-nb-md-table-separator-rendered"
+            : active
+              ? "cm-nb-md-line cm-nb-md-table cm-nb-md-table-source"
+              : "cm-nb-md-line cm-nb-md-table cm-nb-md-table-rendered",
       }).range(lineFrom),
     );
   }
@@ -276,7 +284,20 @@ function decorateRenderedTableRow(
 ): void {
   ranges.push(
     Decoration.replace({
-      widget: new TableRowWidget(row.cells, row.separator),
+      widget: new TableRowWidget(row.cells, row.separator, lineFrom),
+      inclusive: false,
+    }).range(lineFrom, Math.max(lineFrom, lineTo)),
+  );
+}
+
+function decorateCollapsedTableSeparator(
+  lineFrom: number,
+  lineTo: number,
+  ranges: Range<Decoration>[],
+): void {
+  ranges.push(
+    Decoration.replace({
+      widget: new CollapsedTableSeparatorWidget(),
       inclusive: false,
     }).range(lineFrom, Math.max(lineFrom, lineTo)),
   );
@@ -379,7 +400,8 @@ function decorateInlineRegex(
     const to = from + match[0].length;
 
     for (const [startOffset, endOffset] of markerSlices) {
-      const markerFrom = startOffset >= 0 ? from + startOffset : to + startOffset;
+      const markerFrom =
+        startOffset >= 0 ? from + startOffset : to + startOffset;
       const markerTo = endOffset > 0 ? from + endOffset : to + endOffset;
       if (markerFrom < markerTo) ranges.push(hide.range(markerFrom, markerTo));
     }
@@ -540,6 +562,7 @@ class TableRowWidget extends WidgetType {
   constructor(
     private readonly cells: readonly string[],
     private readonly separator: boolean,
+    private readonly lineFrom: number,
   ) {
     super();
   }
@@ -547,23 +570,54 @@ class TableRowWidget extends WidgetType {
   eq(other: TableRowWidget): boolean {
     return (
       other.separator === this.separator &&
+      other.lineFrom === this.lineFrom &&
       other.cells.length === this.cells.length &&
       other.cells.every((cell, index) => cell === this.cells[index])
     );
   }
 
-  toDOM(): HTMLElement {
+  toDOM(view: EditorView): HTMLElement {
+    const lineNumber = view.state.doc.lineAt(this.lineFrom).number;
     const row = document.createElement("span");
     row.className = `cm-nb-md-table-row cm-nb-md-table-row-${Math.min(
       this.cells.length,
       6,
     )}${this.separator ? " cm-nb-md-table-separator-row" : ""}`;
     row.style.gridTemplateColumns = tableGridTemplate(this.cells.length);
+    row.dataset.tableLine = String(lineNumber);
 
-    for (const text of this.cells) {
+    for (const [index, text] of this.cells.entries()) {
       const cell = document.createElement("span");
       cell.className = "cm-nb-md-table-cell";
+      cell.contentEditable = "true";
+      cell.spellcheck = true;
+      cell.dataset.tableLine = String(lineNumber);
+      cell.dataset.tableCell = String(index);
       cell.textContent = this.separator ? "" : text;
+      cell.setAttribute("role", "textbox");
+      cell.setAttribute("aria-label", `Table cell ${index + 1}`);
+      cell.addEventListener("mousedown", (event) => {
+        event.stopPropagation();
+      });
+      cell.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
+      cell.addEventListener("blur", () => {
+        commitTableCell(view, this.lineFrom, index, cell.textContent ?? "");
+      });
+      cell.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          cell.blur();
+          return;
+        }
+
+        if (event.key !== "Tab") return;
+
+        event.preventDefault();
+        commitTableCell(view, this.lineFrom, index, cell.textContent ?? "");
+        moveTableCellFocus(view, this.lineFrom, index, event.shiftKey);
+      });
       row.append(cell);
     }
 
@@ -580,6 +634,151 @@ function tableGridTemplate(columns: number): string {
   if (columns === 2) return "repeat(2, minmax(0, 1fr))";
 
   return `minmax(7.5rem, 0.55fr) repeat(${columns - 1}, minmax(0, 1.45fr))`;
+}
+
+function commitTableCell(
+  view: EditorView,
+  lineFrom: number,
+  cellIndex: number,
+  value: string,
+): void {
+  const line = view.state.doc.lineAt(Math.min(lineFrom, view.state.doc.length));
+  const row = parseTableRow(line.text);
+  if (!row || row.separator || row.cells[cellIndex] == null) return;
+
+  const nextCells = row.cells.slice();
+  nextCells[cellIndex] = normalizeTableCellText(value);
+  const nextLine = renderTableRow(nextCells);
+
+  if (nextLine === line.text) return;
+
+  view.dispatch({
+    changes: { from: line.from, to: line.to, insert: nextLine },
+  });
+}
+
+function normalizeTableCellText(value: string): string {
+  return value.replace(/\s+/g, " ").trim().replaceAll("|", "\\|");
+}
+
+function renderTableRow(cells: readonly string[]): string {
+  return `| ${cells.join(" | ")} |`;
+}
+
+function moveTableCellFocus(
+  view: EditorView,
+  lineFrom: number,
+  cellIndex: number,
+  backwards: boolean,
+): void {
+  const doc = view.state.doc;
+  const line = doc.lineAt(Math.min(lineFrom, doc.length));
+  const row = parseTableRow(line.text);
+  if (!row || row.separator) return;
+
+  if (backwards) {
+    const target = previousTableCell(view, line.number, cellIndex);
+    if (target) focusRenderedTableCell(target.lineNumber, target.cellIndex);
+    return;
+  }
+
+  if (cellIndex + 1 < row.cells.length) {
+    focusRenderedTableCell(line.number, cellIndex + 1);
+    return;
+  }
+
+  const target = nextTableCell(view, line.number);
+  if (target) {
+    focusRenderedTableCell(target.lineNumber, target.cellIndex);
+    return;
+  }
+
+  insertLineAfterTable(view, line.number);
+}
+
+function previousTableCell(
+  view: EditorView,
+  lineNumber: number,
+  cellIndex: number,
+): { lineNumber: number; cellIndex: number } | undefined {
+  if (cellIndex > 0) return { lineNumber, cellIndex: cellIndex - 1 };
+
+  for (let index = lineNumber - 1; index >= 1; index -= 1) {
+    const line = view.state.doc.line(index);
+    const row = parseTableRow(line.text);
+    if (!row) return undefined;
+    if (row.separator) continue;
+    return { lineNumber: index, cellIndex: Math.max(0, row.cells.length - 1) };
+  }
+
+  return undefined;
+}
+
+function nextTableCell(
+  view: EditorView,
+  lineNumber: number,
+): { lineNumber: number; cellIndex: number } | undefined {
+  for (let index = lineNumber + 1; index <= view.state.doc.lines; index += 1) {
+    const line = view.state.doc.line(index);
+    const row = parseTableRow(line.text);
+    if (!row) return undefined;
+    if (row.separator) continue;
+    return { lineNumber: index, cellIndex: 0 };
+  }
+
+  return undefined;
+}
+
+function focusRenderedTableCell(lineNumber: number, cellIndex: number): void {
+  requestAnimationFrame(() => {
+    const selector = `.cm-nb-md-table-cell[data-table-line="${lineNumber}"][data-table-cell="${cellIndex}"]`;
+    const cell = document.querySelector<HTMLElement>(selector);
+    if (!cell) return;
+
+    cell.focus();
+    selectElementText(cell);
+  });
+}
+
+function selectElementText(element: HTMLElement): void {
+  const selection = window.getSelection();
+  if (!selection) return;
+
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function insertLineAfterTable(view: EditorView, lineNumber: number): void {
+  let lastTableLine = lineNumber;
+
+  for (let index = lineNumber + 1; index <= view.state.doc.lines; index += 1) {
+    const line = view.state.doc.line(index);
+    if (!parseTableRow(line.text)) break;
+    lastTableLine = index;
+  }
+
+  const line = view.state.doc.line(lastTableLine);
+  view.dispatch({
+    changes: { from: line.to, insert: "\n" },
+    selection: { anchor: line.to + 1 },
+    scrollIntoView: true,
+  });
+  view.focus();
+}
+
+class CollapsedTableSeparatorWidget extends WidgetType {
+  toDOM(): HTMLElement {
+    const spacer = document.createElement("span");
+    spacer.className = "cm-nb-md-table-separator-spacer";
+    spacer.setAttribute("aria-hidden", "true");
+    return spacer;
+  }
+
+  ignoreEvent(): boolean {
+    return true;
+  }
 }
 
 class HorizontalRuleWidget extends WidgetType {
