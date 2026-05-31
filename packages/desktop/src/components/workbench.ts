@@ -385,16 +385,14 @@ function withStartupWelcome(panes: PaneModel[]) {
     id: "welcome",
     title: "Welcome",
     resource: "nodebody://welcome",
-    active: true,
+    active: false,
     view: welcomeView,
   };
 
   if (!panes.length) return [{ id: "main", tabs: [welcomeTab] }];
 
   const [first, ...rest] = panes;
-  const tabs = first.tabs
-    .filter((tab) => tab.id !== welcomeTab.id)
-    .map((tab) => ({ ...tab, active: false }));
+  const tabs = first.tabs;
 
   return [
     {
