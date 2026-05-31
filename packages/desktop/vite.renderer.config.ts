@@ -6,6 +6,21 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@nodebody\/editor-markdown$/,
+        replacement: resolve(__dirname, "../editor-markdown/src/index.ts"),
+      },
+      {
+        find: /^@nodebody\/editor-markdown\/markdown-editor\.css$/,
+        replacement: resolve(
+          __dirname,
+          "../editor-markdown/src/markdown-editor.css",
+        ),
+      },
+      {
+        find: /^@nodebody\/editor-markdown\/(.*)$/,
+        replacement: resolve(__dirname, "../editor-markdown/src/$1"),
+      },
+      {
         find: /^@nodebody\/ui$/,
         replacement: resolve(__dirname, "../ui/src/index.ts"),
       },

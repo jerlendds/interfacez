@@ -232,6 +232,9 @@ function registerPaneContextMenus(root: ParentNode, scope: Scope) {
     );
 
     const show = (event: MouseEvent | PointerEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest(".nb-md-editor")) return;
+
       event.preventDefault();
       event.stopPropagation();
       void manager.showForElement(
