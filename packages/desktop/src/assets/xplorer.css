@@ -2,7 +2,7 @@
   grid-area: xplorer;
   z-index: 1;
   display: grid;
-  grid-template-rows: 32px minmax(0, 1fr);
+  grid-template-rows: 28px minmax(0, 1fr);
   width: var(--nb-xplorer-width);
   min-width: var(--nb-xplorer-width);
   min-height: 0;
@@ -109,11 +109,11 @@
   color: var(--nb-subtle);
 }
 .nb-xplorer__row--folder[aria-expanded="false"]:hover {
-  color: var(--nb-muted);
+  color: var(--nb-ink);
 }
 
 .nb-xplorer__row--folder[aria-expanded="true"] {
-  color: var(--nb-bright);
+  color: var(--nb-foreground);
 }
 
 .nb-xplorer__row--folder[aria-expanded="true"] svg {
