@@ -245,7 +245,20 @@ export function workbench(options: WorkbenchOptions = {}): Component {
         }
 
         if (isImageFile(title)) {
-          await openImageFile(filePath, title);
+          await openPreviewFile(filePath, title, {
+            kind: "image",
+            tabId: imageTabId(filePath),
+            createView: createImageViewer,
+          });
+          return;
+        }
+
+        if (isVideoFile(title)) {
+          await openPreviewFile(filePath, title, {
+            kind: "video",
+            tabId: videoTabId(filePath),
+            createView: createVideoViewer,
+          });
         }
       }
 
@@ -307,12 +320,16 @@ export function workbench(options: WorkbenchOptions = {}): Component {
         );
       }
 
-      async function openImageFile(filePath: string, title: string) {
+      async function openPreviewFile(
+        filePath: string,
+        title: string,
+        options: PreviewOpenOptions,
+      ) {
         const currentLayout = layout.get();
         const stackId = findActiveStackId(currentLayout);
         if (!stackId) return;
 
-        const tabId = imageTabId(filePath);
+        const tabId = options.tabId;
         const existing = currentLayout.tabs[tabId];
         if (existing) {
           const existingStackId =
@@ -349,9 +366,9 @@ export function workbench(options: WorkbenchOptions = {}): Component {
             },
             content: {
               id: contentId,
-              kind: "image",
+              kind: options.kind,
               resource: `file://${filePath}`,
-              view: createImageViewer({ title, src: dataUrl }),
+              view: options.createView({ title, src: dataUrl }),
             },
             activate: true,
           }),
@@ -461,12 +478,20 @@ function imageTabId(filePath: string) {
   return `image:${encodeURIComponent(filePath)}`;
 }
 
+function videoTabId(filePath: string) {
+  return `video:${encodeURIComponent(filePath)}`;
+}
+
 function isMarkdownFile(fileName: string) {
   return fileName.toLowerCase().endsWith(".md");
 }
 
 function isImageFile(fileName: string) {
   return imageFileExtensions.has(fileExtension(fileName));
+}
+
+function isVideoFile(fileName: string) {
+  return videoFileExtensions.has(fileExtension(fileName));
 }
 
 function fileExtension(fileName: string) {
@@ -490,12 +515,34 @@ const imageFileExtensions = new Set([
   ".webp",
 ]);
 
-interface ImageViewerOptions {
+const videoFileExtensions = new Set([
+  ".3g2",
+  ".3gp",
+  ".avi",
+  ".m4v",
+  ".mkv",
+  ".mov",
+  ".mp4",
+  ".mpeg",
+  ".mpg",
+  ".ogm",
+  ".ogv",
+  ".webm",
+  ".wmv",
+]);
+
+interface PreviewOpenOptions {
+  kind: "image" | "video";
+  tabId: string;
+  createView: (options: MediaViewerOptions) => Component;
+}
+
+interface MediaViewerOptions {
   title: string;
   src: string;
 }
 
-function createImageViewer(options: ImageViewerOptions): Component {
+function createImageViewer(options: MediaViewerOptions): Component {
   return {
     mount(root) {
       const viewer = el("div", "nb-image-viewer");
@@ -504,6 +551,21 @@ function createImageViewer(options: ImageViewerOptions): Component {
       image.alt = options.title;
       image.draggable = false;
       viewer.append(image);
+      root.replaceChildren(viewer);
+    },
+  };
+}
+
+function createVideoViewer(options: MediaViewerOptions): Component {
+  return {
+    mount(root) {
+      const viewer = el("div", "nb-video-viewer");
+      const video = el("video", "nb-video-viewer__video") as HTMLVideoElement;
+      video.src = options.src;
+      video.controls = true;
+      video.preload = "metadata";
+      video.title = options.title;
+      viewer.append(video);
       root.replaceChildren(viewer);
     },
   };

@@ -42,6 +42,11 @@ interface SpacesApi {
   setXplorerExpandedIds: (ids: string[]) => Promise<void>;
   readItem: (itemPath: string) => Promise<string>;
   readItemDataUrl: (itemPath: string) => Promise<string>;
+  relativeItemPath: (itemPath: string) => Promise<string>;
+  createFile: (parentPath: string, name: string) => Promise<string>;
+  createFolder: (parentPath: string, name: string) => Promise<string>;
+  renameItem: (itemPath: string, name: string) => Promise<string>;
+  deleteItem: (itemPath: string) => Promise<void>;
   writeItem: (itemPath: string, value: string) => Promise<void>;
   create: (directoryPath: string) => Promise<Space>;
   select: (directoryPath: string) => Promise<Space>;

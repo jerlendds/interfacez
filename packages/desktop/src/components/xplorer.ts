@@ -1,5 +1,16 @@
-import type { Scope } from "@nodebody/ui";
-import { chevronRightIcon, delegate, el, render, signal } from "@nodebody/ui";
+import type {
+  ContextMenuAction,
+  ContextMenuEvent,
+  Scope,
+} from "@nodebody/ui";
+import {
+  chevronRightIcon,
+  delegate,
+  el,
+  getContextMenuManager,
+  render,
+  signal,
+} from "@nodebody/ui";
 
 export interface XplorerNode {
   id: string;
@@ -15,6 +26,35 @@ export interface XplorerOptions {
   nodes?: XplorerNode[];
   onResize?: (width: number) => void;
   onOpenFile?: (node: XplorerNode) => void;
+  contextMenuContributors?: readonly XplorerContextMenuContribution[];
+}
+
+export interface XplorerContext {
+  node: XplorerNode;
+  event: ContextMenuEvent;
+}
+
+export interface XplorerContextMenuContribution {
+  getActions(context: XplorerContext): readonly ContextMenuAction[];
+  runAction(actionId: string, context: XplorerContext): void | Promise<void>;
+}
+
+let xplorerClipboard:
+  | { mode: "copy" | "cut"; node: Pick<XplorerNode, "id" | "kind" | "name"> }
+  | undefined;
+
+const globalContextMenuContributors: XplorerContextMenuContribution[] = [];
+
+export function registerXplorerContextMenuContribution(
+  contribution: XplorerContextMenuContribution,
+) {
+  globalContextMenuContributors.push(contribution);
+  return {
+    dispose() {
+      const index = globalContextMenuContributors.indexOf(contribution);
+      if (index >= 0) globalContextMenuContributors.splice(index, 1);
+    },
+  };
 }
 
 export function createXplorer(options: XplorerOptions = {}, scope: Scope) {
@@ -151,6 +191,8 @@ export function createXplorer(options: XplorerOptions = {}, scope: Scope) {
     }),
   );
 
+  registerContextMenu();
+
   const onRootDragOver = (event: DragEvent) => {
     if (!draggedId) return;
     if (eventTargetElement(event)?.closest("[data-xplorer-row]")) return;
@@ -245,6 +287,187 @@ export function createXplorer(options: XplorerOptions = {}, scope: Scope) {
     await window.spaces.setXplorerExpandedIds([...expanded]);
   }
 
+  function registerContextMenu() {
+    const manager = getContextMenuManager();
+    scope.add(
+      manager.register(root, {
+        shouldShow(event) {
+          return Boolean(xplorerRowForEvent(event));
+        },
+
+        getActions(event) {
+          const context = contextForEvent(event);
+          if (!context) return [];
+
+          const baseActions = baseContextMenuActions(context.node);
+          const contributedActions = contextMenuContributors()
+            .flatMap((contribution) => [...contribution.getActions(context)])
+            .filter((action) => action.visible !== false);
+
+          if (!contributedActions.length) return baseActions;
+          return [
+            ...baseActions,
+            { id: "xplorer.plugin.separator", type: "separator" },
+            ...contributedActions,
+          ];
+        },
+
+        async runAction(actionId, event) {
+          const context = contextForEvent(event);
+          if (!context) return;
+
+          if (isBaseContextMenuAction(actionId)) {
+            await runBaseContextMenuAction(actionId, context.node);
+            return;
+          }
+
+          for (const contribution of contextMenuContributors()) {
+            const actions = contribution.getActions(context);
+            if (!actions.some((action) => action.id === actionId)) continue;
+            await contribution.runAction(actionId, context);
+            return;
+          }
+        },
+      }),
+    );
+  }
+
+  function contextMenuContributors() {
+    return [
+      ...(options.contextMenuContributors ?? []),
+      ...globalContextMenuContributors,
+    ];
+  }
+
+  function contextForEvent(event: ContextMenuEvent): XplorerContext | undefined {
+    const row = xplorerRowForEvent(event);
+    const id = row?.dataset.xplorerRow;
+    if (!id) return undefined;
+    const node = findNode(nodes.get(), id);
+    return node ? { node, event } : undefined;
+  }
+
+  function xplorerRowForEvent(event: ContextMenuEvent) {
+    return event.target.closest<HTMLElement>("[data-xplorer-row]");
+  }
+
+  function baseContextMenuActions(node: XplorerNode): ContextMenuAction[] {
+    if (node.kind === "file") {
+      return [
+        { id: "xplorer.open", label: "Open as tab" },
+        { type: "separator", id: "xplorer.separator.open" },
+        { id: "xplorer.cut", label: "Cut file" },
+        { id: "xplorer.copy", label: "Copy file" },
+        { type: "separator", id: "xplorer.separator.clipboard" },
+        { id: "xplorer.copyPath", label: "Copy path" },
+        { id: "xplorer.copyRelativePath", label: "Copy relative path" },
+        { type: "separator", id: "xplorer.separator.manage" },
+        { id: "xplorer.rename", label: "Rename file" },
+        { id: "xplorer.delete", label: "Delete file" },
+      ];
+    }
+
+    return [
+      { id: "xplorer.newFile", label: "New file" },
+      { id: "xplorer.newFolder", label: "New folder" },
+      { type: "separator", id: "xplorer.separator.create" },
+      { id: "xplorer.copy", label: "Copy" },
+      { id: "xplorer.cut", label: "Cut" },
+      { type: "separator", id: "xplorer.separator.clipboard" },
+      { id: "xplorer.copyPath", label: "Copy path" },
+      { id: "xplorer.copyRelativePath", label: "Copy relative path" },
+      { type: "separator", id: "xplorer.separator.manage" },
+      { id: "xplorer.rename", label: "Rename" },
+      { id: "xplorer.delete", label: "Delete" },
+    ];
+  }
+
+  async function runBaseContextMenuAction(actionId: string, node: XplorerNode) {
+    switch (actionId) {
+      case "xplorer.open":
+        if (node.kind === "file") options.onOpenFile?.(node);
+        return;
+      case "xplorer.newFile":
+        await createChild(node, "file");
+        return;
+      case "xplorer.newFolder":
+        await createChild(node, "folder");
+        return;
+      case "xplorer.copy":
+        await copyItem(node, "copy");
+        return;
+      case "xplorer.cut":
+        await copyItem(node, "cut");
+        return;
+      case "xplorer.copyPath":
+        await copyText(node.id);
+        return;
+      case "xplorer.copyRelativePath":
+        await copyText(await window.spaces.relativeItemPath(node.id));
+        return;
+      case "xplorer.rename":
+        await renameItem(node);
+        return;
+      case "xplorer.delete":
+        await deleteItem(node);
+        return;
+    }
+  }
+
+  async function createChild(node: XplorerNode, kind: "file" | "folder") {
+    if (node.kind !== "folder") return;
+    const name = window.prompt(
+      kind === "file" ? "New file name" : "New folder name",
+      kind === "file" ? "Untitled.md" : "New folder",
+    );
+    if (name == null || !name.trim()) return;
+
+    try {
+      if (kind === "file") await window.spaces.createFile(node.id, name);
+      else await window.spaces.createFolder(node.id, name);
+      expanded.add(node.id);
+      await persistExpanded();
+      await loadSpaceItems();
+    } catch (error) {
+      showError(error);
+    }
+  }
+
+  async function copyItem(node: XplorerNode, mode: "copy" | "cut") {
+    xplorerClipboard = {
+      mode,
+      node: { id: node.id, kind: node.kind, name: node.name },
+    };
+    await copyText(node.id);
+  }
+
+  async function renameItem(node: XplorerNode) {
+    const name = window.prompt("Rename", node.name);
+    if (name == null || !name.trim() || name === node.name) return;
+
+    try {
+      await window.spaces.renameItem(node.id, name);
+      await loadSpaceItems();
+    } catch (error) {
+      showError(error);
+    }
+  }
+
+  async function deleteItem(node: XplorerNode) {
+    const message =
+      node.kind === "folder"
+        ? `Delete ${node.name} and its contents?`
+        : `Delete ${node.name}?`;
+    if (!window.confirm(message)) return;
+
+    try {
+      await window.spaces.deleteItem(node.id);
+      await loadSpaceItems();
+    } catch (error) {
+      showError(error);
+    }
+  }
+
   function renderNode(node: XplorerNode, depth: number): HTMLElement {
     const item = el("div", "nb-xplorer__item");
     item.setAttribute("role", "none");
@@ -325,6 +548,35 @@ export function createXplorer(options: XplorerOptions = {}, scope: Scope) {
       },
     });
   }
+}
+
+function isBaseContextMenuAction(actionId: string) {
+  return baseContextMenuActionIds.has(actionId);
+}
+
+const baseContextMenuActionIds = new Set([
+  "xplorer.open",
+  "xplorer.newFile",
+  "xplorer.newFolder",
+  "xplorer.copy",
+  "xplorer.cut",
+  "xplorer.copyPath",
+  "xplorer.copyRelativePath",
+  "xplorer.rename",
+  "xplorer.delete",
+]);
+
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    document.execCommand("copy");
+  }
+}
+
+function showError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  window.alert(message);
 }
 
 function cloneNodes(nodes: XplorerNode[]): XplorerNode[] {

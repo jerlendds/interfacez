@@ -26,6 +26,29 @@ contextBridge.exposeInMainWorld("spaces", {
   readItem: (itemPath: string) => ipcRenderer.invoke("spaces:readItem", itemPath),
   readItemDataUrl: (itemPath: string) =>
     ipcRenderer.invoke("spaces:readItemDataUrl", itemPath),
+  relativeItemPath: (itemPath: string) =>
+    ipcRenderer.invoke("spaces:relativeItemPath", itemPath),
+  createFile: (parentPath: string, name: string) =>
+    ipcRenderer.invoke("spaces:createFile", parentPath, name).then((itemPath) => {
+      window.dispatchEvent(new CustomEvent("spaces:changed"));
+      return itemPath;
+    }),
+  createFolder: (parentPath: string, name: string) =>
+    ipcRenderer
+      .invoke("spaces:createFolder", parentPath, name)
+      .then((itemPath) => {
+        window.dispatchEvent(new CustomEvent("spaces:changed"));
+        return itemPath;
+      }),
+  renameItem: (itemPath: string, name: string) =>
+    ipcRenderer.invoke("spaces:renameItem", itemPath, name).then((nextPath) => {
+      window.dispatchEvent(new CustomEvent("spaces:changed"));
+      return nextPath;
+    }),
+  deleteItem: (itemPath: string) =>
+    ipcRenderer.invoke("spaces:deleteItem", itemPath).then(() => {
+      window.dispatchEvent(new CustomEvent("spaces:changed"));
+    }),
   writeItem: (itemPath: string, value: string) =>
     ipcRenderer.invoke("spaces:writeItem", itemPath, value),
   create: (directoryPath: string) =>

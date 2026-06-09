@@ -58,7 +58,14 @@ export interface ContentNode {
 
 export interface LayoutContent {
   id: ContentId;
-  kind: "markdown" | "pdf" | "web" | "image" | `plugin:${string}` | "empty";
+  kind:
+    | "markdown"
+    | "pdf"
+    | "web"
+    | "image"
+    | "video"
+    | `plugin:${string}`
+    | "empty";
   resource: string;
   view?: Component;
   minWidth?: number;

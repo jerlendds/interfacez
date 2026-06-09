@@ -70,6 +70,50 @@ export function registerSpacesIpc() {
     return `data:${mimeTypeForPath(resolved)};base64,${data.toString("base64")}`;
   });
 
+  ipcMain.handle("spaces:relativeItemPath", async (_event, itemPath: string) => {
+    const resolved = assertActiveSpaceItemPath(itemPath);
+    return path.relative(path.resolve(activeSpacePath!), resolved);
+  });
+
+  ipcMain.handle(
+    "spaces:createFile",
+    async (_event, parentPath: string, name: string) => {
+      const parent = assertActiveSpaceItemPath(parentPath);
+      await assertDirectory(parent);
+      const filePath = childPath(parent, name);
+      await fs.writeFile(filePath, "", { flag: "wx" });
+      return filePath;
+    },
+  );
+
+  ipcMain.handle(
+    "spaces:createFolder",
+    async (_event, parentPath: string, name: string) => {
+      const parent = assertActiveSpaceItemPath(parentPath);
+      await assertDirectory(parent);
+      const folderPath = childPath(parent, name);
+      await fs.mkdir(folderPath);
+      return folderPath;
+    },
+  );
+
+  ipcMain.handle(
+    "spaces:renameItem",
+    async (_event, itemPath: string, name: string) => {
+      const resolved = assertActiveSpaceItemPath(itemPath);
+      const target = childPath(path.dirname(resolved), name);
+      assertActiveSpaceItemPath(target);
+      await assertAvailable(target);
+      await fs.rename(resolved, target);
+      return target;
+    },
+  );
+
+  ipcMain.handle("spaces:deleteItem", async (_event, itemPath: string) => {
+    const resolved = assertActiveSpaceItemPath(itemPath);
+    await fs.rm(resolved, { recursive: true, force: false });
+  });
+
   ipcMain.handle(
     "spaces:writeItem",
     async (_event, itemPath: string, value: string) => {
@@ -127,6 +171,37 @@ function assertActiveSpaceItemPath(itemPath: string) {
   return resolved;
 }
 
+async function assertDirectory(itemPath: string) {
+  const stat = await fs.stat(itemPath);
+  if (!stat.isDirectory()) throw new Error(`Path is not a folder: ${itemPath}`);
+}
+
+async function assertAvailable(itemPath: string) {
+  try {
+    await fs.stat(itemPath);
+  } catch (error) {
+    if (isNotFoundError(error)) return;
+    throw error;
+  }
+  throw new Error(`Path already exists: ${itemPath}`);
+}
+
+function childPath(parentPath: string, name: string) {
+  const cleanName = name.trim();
+  if (!cleanName) throw new Error("Name is required.");
+  if (cleanName !== path.basename(cleanName)) {
+    throw new Error(`Name cannot include path separators: ${name}`);
+  }
+  return path.join(parentPath, cleanName);
+}
+
+function isNotFoundError(error: unknown) {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return false;
+  }
+  return (error as { code?: unknown }).code === "ENOENT";
+}
+
 function mimeTypeForPath(itemPath: string) {
   switch (path.extname(itemPath).toLowerCase()) {
     case ".apng":
@@ -151,6 +226,30 @@ function mimeTypeForPath(itemPath: string) {
       return "image/svg+xml";
     case ".webp":
       return "image/webp";
+    case ".3g2":
+      return "video/3gpp2";
+    case ".3gp":
+      return "video/3gpp";
+    case ".avi":
+      return "video/x-msvideo";
+    case ".m4v":
+      return "video/x-m4v";
+    case ".mkv":
+      return "video/x-matroska";
+    case ".mov":
+      return "video/quicktime";
+    case ".mp4":
+      return "video/mp4";
+    case ".mpeg":
+    case ".mpg":
+      return "video/mpeg";
+    case ".ogm":
+    case ".ogv":
+      return "video/ogg";
+    case ".webm":
+      return "video/webm";
+    case ".wmv":
+      return "video/x-ms-wmv";
     default:
       return "application/octet-stream";
   }
