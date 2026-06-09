@@ -456,8 +456,8 @@ export function createXplorer(options: XplorerOptions = {}, scope: Scope) {
   async function deleteItem(node: XplorerNode) {
     const message =
       node.kind === "folder"
-        ? `Delete ${node.name} and its contents?`
-        : `Delete ${node.name}?`;
+        ? `Move ${node.name} and its contents to Trash?`
+        : `Move ${node.name} to Trash?`;
     if (!window.confirm(message)) return;
 
     try {

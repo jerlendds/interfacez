@@ -111,7 +111,7 @@ export function registerSpacesIpc() {
 
   ipcMain.handle("spaces:deleteItem", async (_event, itemPath: string) => {
     const resolved = assertActiveSpaceItemPath(itemPath);
-    await fs.rm(resolved, { recursive: true, force: false });
+    return trashItem(resolved);
   });
 
   ipcMain.handle(
@@ -133,7 +133,7 @@ function withDisplayPath(space: Space): DisplaySpace {
 async function listSpaceItems(spacePath: string): Promise<SpaceItem[]> {
   const entries = await fs.readdir(spacePath, { withFileTypes: true });
   const items = entries
-    .filter((entry) => entry.name !== ".nb")
+    .filter((entry) => !isHiddenSpaceItem(entry.name))
     .map(async (entry): Promise<SpaceItem> => {
       const id = path.join(spacePath, entry.name);
       if (!entry.isDirectory()) {
@@ -148,6 +148,10 @@ async function listSpaceItems(spacePath: string): Promise<SpaceItem[]> {
     });
 
   return (await Promise.all(items)).sort(compareSpaceItems);
+}
+
+function isHiddenSpaceItem(name: string) {
+  return name.startsWith(".");
 }
 
 function compareSpaceItems(a: SpaceItem, b: SpaceItem) {
@@ -171,19 +175,56 @@ function assertActiveSpaceItemPath(itemPath: string) {
   return resolved;
 }
 
+async function trashItem(itemPath: string) {
+  if (!activeSpacePath) throw new Error("Please select a space");
+
+  const trashPath = path.join(path.resolve(activeSpacePath), ".nb", "Trash");
+  const relative = path.relative(trashPath, itemPath);
+  if (!relative.startsWith("..") && !path.isAbsolute(relative)) {
+    throw new Error("Item is already in Trash.");
+  }
+
+  await fs.mkdir(trashPath, { recursive: true });
+  const target = await availableTrashPath(trashPath, path.basename(itemPath));
+  await fs.rename(itemPath, target);
+  return target;
+}
+
+async function availableTrashPath(trashPath: string, name: string) {
+  const parsed = path.parse(name);
+  let candidate = path.join(trashPath, name);
+  let index = 1;
+
+  while (!(await isPathAvailable(candidate))) {
+    const suffix = ` ${index}`;
+    candidate = path.join(
+      trashPath,
+      `${parsed.name}${suffix}${parsed.ext}`,
+    );
+    index += 1;
+  }
+
+  return candidate;
+}
+
 async function assertDirectory(itemPath: string) {
   const stat = await fs.stat(itemPath);
   if (!stat.isDirectory()) throw new Error(`Path is not a folder: ${itemPath}`);
 }
 
 async function assertAvailable(itemPath: string) {
+  if (await isPathAvailable(itemPath)) return;
+  throw new Error(`Path already exists: ${itemPath}`);
+}
+
+async function isPathAvailable(itemPath: string) {
   try {
     await fs.stat(itemPath);
   } catch (error) {
-    if (isNotFoundError(error)) return;
+    if (isNotFoundError(error)) return true;
     throw error;
   }
-  throw new Error(`Path already exists: ${itemPath}`);
+  return false;
 }
 
 function childPath(parentPath: string, name: string) {
