@@ -41,6 +41,7 @@ interface CssRuleOrigin {
   selector: string;
   startLine: number;
   endLine: number;
+  openIndex?: number;
   declarations: Record<string, string>;
 }
 
@@ -346,8 +347,9 @@ function collectCss(project: ProjectState) {
   const rules: CssRuleOrigin[] = [];
   const css = cssFiles
     .map((file) => {
-      rules.push(...parseCssRules(file.path, file.content));
-      return `/* ${file.path} */\n${file.content}`;
+      const fileRules = parseCssRules(file.path, file.content);
+      rules.push(...fileRules);
+      return `/* ${file.path} */\n${annotateCssRuleIds(file.content, fileRules)}`;
     })
     .join("\n\n");
   return { css, rules };
@@ -629,9 +631,14 @@ function generateRuntimeBridge() {
         }
         const declarations = {};
         for (const property of Array.from(rule.style)) {
+          if (property === "--nb-preview-rule-id") continue;
           declarations[property] = rule.style.getPropertyValue(property);
         }
-        rules.push({ selector: rule.selectorText, declarations });
+        rules.push({
+          ruleId: rule.style.getPropertyValue("--nb-preview-rule-id").trim() || undefined,
+          selector: rule.selectorText,
+          declarations
+        });
       }
     }
     return rules;
@@ -735,16 +742,35 @@ function parseCssRules(file: string, content: string): CssRuleOrigin[] {
     const declarations = parseCssDeclarations(match[3]);
     const start = sourceLocationForOffset(lineStarts, match.index + match[1].length);
     const end = sourceLocationForOffset(lineStarts, rulePattern.lastIndex);
+    const openIndex = content.indexOf("{", match.index + match[1].length);
     rules.push({
       ruleId: `css_${stableHash(`${file}:${start.line}:${selector}`)}`,
       file,
       selector,
       startLine: start.line,
       endLine: end.line,
+      openIndex,
       declarations,
     });
   }
   return rules;
+}
+
+function annotateCssRuleIds(content: string, rules: readonly CssRuleOrigin[]) {
+  let annotated = content;
+  const ordered = [...rules]
+    .filter((rule) => typeof rule.openIndex === "number" && rule.openIndex >= 0)
+    .sort((a, b) => (b.openIndex ?? 0) - (a.openIndex ?? 0));
+
+  for (const rule of ordered) {
+    const openIndex = rule.openIndex ?? -1;
+    annotated =
+      annotated.slice(0, openIndex + 1) +
+      `\n  --nb-preview-rule-id: ${rule.ruleId};` +
+      annotated.slice(openIndex + 1);
+  }
+
+  return annotated;
 }
 
 function parseCssDeclarations(block: string) {

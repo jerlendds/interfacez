@@ -82,12 +82,12 @@ const tokyoNightTheme: monaco.editor.IStandaloneThemeData = {
     { token: "key", foreground: "7aa2f7" },
   ],
   colors: {
-    "editor.background": "#1a1b26",
+    "editor.background": "#141622",
     "editor.foreground": "#c0caf5",
     "editor.lineHighlightBackground": "#292e42",
     "editor.selectionBackground": "#33467c",
     "editor.inactiveSelectionBackground": "#292e42",
-    "editorCursor.foreground": "#c0caf5",
+    "editorCursor.foreground": "#a9aecb",
     "editorIndentGuide.activeBackground1": "#737aa2",
     "editorIndentGuide.background1": "#3b4261",
     "editorLineNumber.activeForeground": "#737aa2",
@@ -177,12 +177,15 @@ export function createWebFileEditor(options: WebFileEditorOptions): Component {
       let saving = false;
       let pendingText: string | undefined;
       let lastSavedText = initialText;
+      let applyingExternalUpdate = false;
 
       if (initialText !== options.initialText) {
         options.setSaving(true);
-        void window.spaces.writeItem(options.filePath, initialText).finally(() => {
-          options.setSaving(false);
-        });
+        void window.spaces
+          .writeItem(options.filePath, initialText)
+          .finally(() => {
+            options.setSaving(false);
+          });
       }
 
       const model = monaco.editor.createModel(
@@ -209,7 +212,9 @@ export function createWebFileEditor(options: WebFileEditorOptions): Component {
       const flush = () => {
         if (saving) return;
         const value =
-          pendingText === undefined ? undefined : stripWebFileArtifacts(pendingText);
+          pendingText === undefined
+            ? undefined
+            : stripWebFileArtifacts(pendingText);
         pendingText = undefined;
         if (value === undefined || value === lastSavedText) {
           options.setSaving(false);
@@ -239,6 +244,7 @@ export function createWebFileEditor(options: WebFileEditorOptions): Component {
       };
 
       const change = model.onDidChangeContent(() => {
+        if (applyingExternalUpdate) return;
         const nextText = model.getValue();
         const sanitizedText = stripWebFileArtifacts(nextText);
         if (sanitizedText !== nextText) {
@@ -287,7 +293,63 @@ export function createWebFileEditor(options: WebFileEditorOptions): Component {
       };
       window.addEventListener("nb:web-file-reveal", onReveal);
       scope.add(
-        disposable(() => window.removeEventListener("nb:web-file-reveal", onReveal)),
+        disposable(() =>
+          window.removeEventListener("nb:web-file-reveal", onReveal),
+        ),
+      );
+
+      const onExternalUpdate = (event: Event) => {
+        const detail = (
+          event as CustomEvent<{
+            filePath?: string;
+            value?: string;
+          }>
+        ).detail;
+        if (detail?.filePath !== options.filePath) return;
+        if (typeof detail.value !== "string") return;
+
+        const nextText = stripWebFileArtifacts(detail.value);
+        if (nextText === model.getValue()) {
+          lastSavedText = nextText;
+          pendingText = undefined;
+          options.setSaving(false);
+          return;
+        }
+
+        if (saveTimer !== undefined) {
+          window.clearTimeout(saveTimer);
+          saveTimer = undefined;
+        }
+
+        const position = editor.getPosition();
+        applyingExternalUpdate = true;
+        try {
+          model.pushEditOperations(
+            editor.getSelections(),
+            [
+              {
+                range: model.getFullModelRange(),
+                text: nextText,
+              },
+            ],
+            () => null,
+          );
+        } finally {
+          applyingExternalUpdate = false;
+        }
+        if (position) editor.setPosition(position);
+        lastSavedText = nextText;
+        pendingText = undefined;
+        options.setSaving(false);
+      };
+      window.addEventListener("nb:web-file-external-update", onExternalUpdate);
+      scope.add(
+        disposable(() =>
+          window.removeEventListener(
+            "nb:web-file-external-update",
+            onExternalUpdate,
+          ),
+        ),
       );
     },
   };
@@ -299,7 +361,9 @@ function configureMonaco() {
 
   (
     globalThis as typeof globalThis & {
-      MonacoEnvironment: { getWorker(_workerId: string, label: string): Worker };
+      MonacoEnvironment: {
+        getWorker(_workerId: string, label: string): Worker;
+      };
     }
   ).MonacoEnvironment = {
     getWorker(_workerId: string, label: string) {
@@ -310,7 +374,8 @@ function configureMonaco() {
       if (label === "html" || label === "handlebars" || label === "razor") {
         return new HtmlWorker();
       }
-      if (label === "typescript" || label === "javascript") return new TsWorker();
+      if (label === "typescript" || label === "javascript")
+        return new TsWorker();
       return new EditorWorker();
     },
   };
@@ -373,13 +438,15 @@ function configureMonaco() {
 }
 
 function stripWebFileArtifacts(value: string) {
-  return value.replace(
-    /web-(?:file|project):%2F[^\s"'<>`)]*?\$\d+/g,
-    "",
-  );
+  return value.replace(/web-(?:file|project):%2F[^\s"'<>`)]*?\$\d+/g, "");
 }
 
-const tsxSemanticTokenTypes = ["tag", "attribute.name", "attribute.value", "text"];
+const tsxSemanticTokenTypes = [
+  "tag",
+  "attribute.name",
+  "attribute.value",
+  "text",
+];
 
 function registerTsxSemanticTokens() {
   const provider: monaco.languages.DocumentSemanticTokensProvider = {
@@ -392,7 +459,10 @@ function registerTsxSemanticTokens() {
     provideDocumentSemanticTokens(model) {
       if (!isJsxLikePath(model.uri.path)) return { data: new Uint32Array() };
       return {
-        data: encodeSemanticTokens(model, collectJsxSemanticTokens(model.getValue())),
+        data: encodeSemanticTokens(
+          model,
+          collectJsxSemanticTokens(model.getValue()),
+        ),
       };
     },
     releaseDocumentSemanticTokens() {},
@@ -587,7 +657,8 @@ function encodeSemanticTokens(
     const dataIndex = index * 5;
 
     data[dataIndex] = line - previousLine;
-    data[dataIndex + 1] = line === previousLine ? character - previousCharacter : character;
+    data[dataIndex + 1] =
+      line === previousLine ? character - previousCharacter : character;
     data[dataIndex + 2] = token.length;
     data[dataIndex + 3] = token.tokenType;
     data[dataIndex + 4] = 0;
@@ -622,7 +693,12 @@ function isAttributeBoundary(char: string | undefined) {
   return char === undefined || /\s/.test(char) || char === "<" || char === "/";
 }
 
-function skipBalanced(source: string, start: number, open: string, close: string) {
+function skipBalanced(
+  source: string,
+  start: number,
+  open: string,
+  close: string,
+) {
   let depth = 0;
   let quote: string | undefined;
   let index = start;

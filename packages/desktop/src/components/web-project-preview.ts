@@ -44,6 +44,7 @@ interface CssRuleOrigin {
   selector: string;
   startLine: number;
   endLine: number;
+  openIndex?: number;
   declarations: Record<string, string>;
 }
 
@@ -96,6 +97,7 @@ interface PreviewBox {
 }
 
 interface MatchedCssRuleSummary {
+  ruleId?: string;
   selector: string;
   declarations: Record<string, string>;
 }
@@ -529,8 +531,16 @@ export function createWebProjectPreview(
           patch.selector,
           patch.property,
           patch.value,
+          patch.startLine,
         );
+        if (next === current) return;
         await window.spaces.writeItem(filePath, next);
+        window.dispatchEvent(
+          new CustomEvent("nb:web-file-external-update", {
+            detail: { filePath, value: next },
+          }),
+        );
+        selectedElement.computedStyle[property] = value;
         window.dispatchEvent(
           new CustomEvent("nb:web-file-saved", {
             detail: { filePath },
@@ -1189,6 +1199,7 @@ function sanitizeInspectedPayload(
           .filter((rule) => rule && typeof rule.selector === "string")
           .slice(0, 20)
           .map((rule) => ({
+            ruleId: optionalString(rule.ruleId, 100),
             selector: rule.selector.slice(0, 300),
             declarations: safeStringRecord(rule.declarations, 80, 500),
           }))
@@ -1269,6 +1280,20 @@ function matchedProjectRules(
   payload: InspectedElementPayload,
   rules: readonly CssRuleOrigin[],
 ) {
+  const rulesById = new Map(rules.map((rule) => [rule.ruleId, rule]));
+  const exactMatches: CssRuleOrigin[] = [];
+  const usedIds = new Set<string>();
+
+  for (const matched of payload.matchedRules ?? []) {
+    if (!matched.ruleId) continue;
+    const rule = rulesById.get(matched.ruleId);
+    if (!rule || usedIds.has(rule.ruleId)) continue;
+    exactMatches.push(rule);
+    usedIds.add(rule.ruleId);
+  }
+
+  if (exactMatches.length) return exactMatches;
+
   const matchedSelectors = new Set(
     (payload.matchedRules ?? []).map((rule) => rule.selector),
   );
@@ -1283,10 +1308,18 @@ function pickCssPatchTarget(
 ) {
   const matched = matchedProjectRules(payload, rules);
   const cssName = cssPropertyName(property);
-  const existingDeclaration = matched.find((rule) => cssName in rule.declarations);
-  const target = existingDeclaration ?? matched[0];
+  const existingDeclaration = [...matched]
+    .reverse()
+    .find((rule) => cssName in rule.declarations);
+  const target = existingDeclaration ?? matched[matched.length - 1];
   if (target) {
-    return { file: target.file, selector: target.selector, property, value };
+    return {
+      file: target.file,
+      selector: target.selector,
+      property,
+      value,
+      startLine: target.startLine,
+    };
   }
 
   const className = payload.classList.find(Boolean);
@@ -1297,6 +1330,7 @@ function pickCssPatchTarget(
     selector: `.${cssIdentifier(className)}`,
     property,
     value,
+    startLine: undefined,
   };
 }
 
@@ -1305,8 +1339,13 @@ function patchCssDeclaration(
   selector: string,
   property: string,
   value: string,
+  startLine?: number,
 ) {
-  const selectorIndex = css.indexOf(selector);
+  const searchStart = startLine ? offsetForLine(css, startLine) : 0;
+  let selectorIndex = css.indexOf(selector, searchStart);
+  if (selectorIndex < 0 && searchStart > 0) {
+    selectorIndex = css.indexOf(selector);
+  }
   if (selectorIndex < 0) {
     return `${css.trimEnd()}\n\n${selector} {\n  ${cssPropertyName(property)}: ${value};\n}\n`;
   }
@@ -1331,6 +1370,17 @@ function patchCssDeclaration(
       })
     : `${block.trimEnd()}\n  ${cssName}: ${value};\n`;
   return `${before}${nextBlock}${after}`;
+}
+
+function offsetForLine(text: string, line: number) {
+  if (line <= 1) return 0;
+  let currentLine = 1;
+  for (let index = 0; index < text.length; index += 1) {
+    if (text.charCodeAt(index) !== 10) continue;
+    currentLine += 1;
+    if (currentLine === line) return index + 1;
+  }
+  return 0;
 }
 
 function cssPropertyName(property: string) {
