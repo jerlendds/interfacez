@@ -27,7 +27,10 @@ export interface XplorerOptions {
   nodes?: XplorerNode[];
   onResize?: (width: number) => void;
   onOpenFile?: (node: XplorerNode) => void;
-  onOpenWebFolder?: (node: XplorerNode) => void;
+  onOpenWebFolder?: (
+    node: XplorerNode,
+    options?: { openIfMissing?: boolean },
+  ) => void;
   contextMenuContributors?: readonly XplorerContextMenuContribution[];
 }
 
@@ -127,6 +130,7 @@ export function createXplorer(options: XplorerOptions = {}, scope: Scope) {
             expanded.delete(node.id);
             void persistExpanded();
             renderTree();
+            options.onOpenWebFolder?.(webRoot, { openIfMissing: true });
             return;
           }
           expanded.add(node.id);

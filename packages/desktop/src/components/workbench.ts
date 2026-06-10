@@ -118,8 +118,8 @@ export function workbench(options: WorkbenchOptions = {}): Component {
           onOpenFile(node) {
             void openSpaceFile(node.id, node.name);
           },
-          onOpenWebFolder(node) {
-            openWebProjectFolder(node.id, node.name);
+          onOpenWebFolder(node, webOptions) {
+            openWebProjectFolder(node.id, node.name, webOptions);
           },
         },
         scope,
@@ -381,7 +381,11 @@ export function workbench(options: WorkbenchOptions = {}): Component {
         );
       }
 
-      function openWebProjectFolder(folderPath: string, title: string) {
+      function openWebProjectFolder(
+        folderPath: string,
+        title: string,
+        options: { openIfMissing?: boolean } = {},
+      ) {
         const currentLayout = layout.get();
         const stackId = findActiveStackId(currentLayout);
         if (!stackId) return;
@@ -389,6 +393,7 @@ export function workbench(options: WorkbenchOptions = {}): Component {
         const tabId = webProjectTabId(folderPath);
         const existing = currentLayout.tabs[tabId];
         if (existing) {
+          if (options.openIfMissing) return;
           const existingStackId =
             findStackContainingTab(currentLayout, tabId) ?? stackId;
           layout.set(
