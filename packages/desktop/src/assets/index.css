@@ -8,6 +8,7 @@
 @import "image-viewer.css";
 @import "video-viewer.css";
 @import "web-project-preview.css";
+@import "web-file-editor.css";
 @import "welcome.css";
 
 :root {

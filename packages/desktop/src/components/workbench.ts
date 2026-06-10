@@ -30,6 +30,7 @@ import { createSidebar } from "./sidebar";
 import { createToolbar } from "./toolbar";
 import { statusBar } from "./statusbar";
 import { createXplorer } from "./xplorer";
+import { createWebFileEditor } from "./web-file-editor";
 import { createWebProjectPreview } from "./web-project-preview";
 
 /// Options used to assemble the default workbench shell.
@@ -120,6 +121,9 @@ export function workbench(options: WorkbenchOptions = {}): Component {
           },
           onOpenWebFolder(node, webOptions) {
             openWebProjectFolder(node.id, node.name, webOptions);
+          },
+          onOpenWebFile(node) {
+            void openWebProjectFile(node.id, node.name);
           },
         },
         scope,
@@ -437,6 +441,64 @@ export function workbench(options: WorkbenchOptions = {}): Component {
           }),
         );
       }
+
+      async function openWebProjectFile(filePath: string, title: string) {
+        const currentLayout = layout.get();
+        const stackId = findActiveStackId(currentLayout);
+        if (!stackId) return;
+
+        const tabId = webFileTabId(filePath);
+        const existing = currentLayout.tabs[tabId];
+        if (existing) {
+          const existingStackId =
+            findStackContainingTab(currentLayout, tabId) ?? stackId;
+          layout.set(
+            applyLayoutTransaction(currentLayout, {
+              type: "activateTab",
+              stackId: existingStackId,
+              tabId,
+            }),
+          );
+          return;
+        }
+
+        const initialText = await window.spaces.readItem(filePath);
+        const pageId = `page:${tabId}`;
+        const contentId = `content:${tabId}`;
+
+        layout.set(
+          applyLayoutTransaction(layout.get(), {
+            type: "openTab",
+            stackId,
+            tab: {
+              id: tabId,
+              title,
+              resource: `file://${filePath}`,
+              page: pageId,
+              closable: true,
+            },
+            page: {
+              kind: "content",
+              id: pageId,
+              contentId,
+            },
+            content: {
+              id: contentId,
+              kind: "web",
+              resource: `file://${filePath}`,
+              view: createWebFileEditor({
+                filePath,
+                title,
+                initialText,
+                setSaving(saving) {
+                  setTabSavingState(tabId, saving);
+                },
+              }),
+            },
+            activate: true,
+          }),
+        );
+      }
     },
   };
 }
@@ -547,6 +609,10 @@ function videoTabId(filePath: string) {
 
 function webProjectTabId(filePath: string) {
   return `web-project:${encodeURIComponent(filePath)}`;
+}
+
+function webFileTabId(filePath: string) {
+  return `web-file:${encodeURIComponent(filePath)}`;
 }
 
 function isMarkdownFile(fileName: string) {

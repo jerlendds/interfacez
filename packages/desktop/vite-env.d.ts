@@ -19,6 +19,10 @@ declare module "*?url" {
   export default url;
 }
 
+interface MonacoEnvironment {
+  getWorker(workerId: string, label: string): Worker;
+}
+
 interface VersionsApi {
   chrome: () => string;
 }

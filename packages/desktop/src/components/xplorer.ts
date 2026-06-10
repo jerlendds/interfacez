@@ -31,6 +31,7 @@ export interface XplorerOptions {
     node: XplorerNode,
     options?: { openIfMissing?: boolean },
   ) => void;
+  onOpenWebFile?: (node: XplorerNode, webRoot: XplorerNode) => void;
   contextMenuContributors?: readonly XplorerContextMenuContribution[];
 }
 
@@ -125,6 +126,10 @@ export function createXplorer(options: XplorerOptions = {}, scope: Scope) {
       if (!node) return;
       const webRoot = findWebRootForNode(nodes.get(), id);
       if (webRoot) {
+        if (node.kind === "file") {
+          options.onOpenWebFile?.(node, webRoot);
+          return;
+        }
         if (node.kind === "folder") {
           if (expanded.has(node.id)) {
             expanded.delete(node.id);
