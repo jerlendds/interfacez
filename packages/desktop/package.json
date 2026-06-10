@@ -7,9 +7,10 @@
   "private": true,
   "scripts": {
     "start": "electron-forge start",
+    "clean:make": "node -e \"require('node:fs').rmSync('out/make', { recursive: true, force: true })\"",
     "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
+    "make": "npm run clean:make && electron-forge make",
+    "publish": "npm run clean:make && electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "test:e2e": "wdio run ./wdio.conf.cjs"
   },
@@ -30,16 +31,22 @@
   "repository": {
     "url": "https://github.com/jerlendds/interfacez"
   },
+  "license": "UNLICENSED",
   "type": "commonjs",
   "devDependencies": {
     "@electron-forge/cli": "^7.11.2",
     "@electron-forge/maker-deb": "^7.11.2",
+    "@electron-forge/maker-dmg": "^7.11.2",
+    "@electron-forge/maker-msix": "^7.11.2",
+    "@electron-forge/maker-pkg": "^7.11.2",
     "@electron-forge/maker-rpm": "^7.11.2",
     "@electron-forge/maker-squirrel": "^7.11.2",
     "@electron-forge/maker-zip": "^7.11.2",
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.2",
+    "@electron-forge/plugin-electronegativity": "^7.10.2",
     "@electron-forge/plugin-fuses": "^7.11.2",
     "@electron-forge/plugin-vite": "^7.11.2",
+    "@electron-forge/publisher-github": "^7.11.2",
     "@electron/fuses": "^1.8.0",
     "@testing-library/webdriverio": "^3.2.1",
     "@types/electron-squirrel-startup": "^1.0.2",
@@ -60,14 +67,14 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
-    "@tursodatabase/database": "^0.6.1",
-    "isomorphic-git": "^1.38.3",
-    "@lmstudio/sdk": "^1.5.0",
     "@interfacez/editor-markdown": "^1.0.0",
     "@interfacez/ui": "^1.0.0",
+    "@lmstudio/sdk": "^1.5.0",
+    "@tursodatabase/database": "^0.6.1",
     "dompurify": "^3.4.8",
     "electron-squirrel-startup": "^1.0.1",
     "esbuild-wasm": "^0.28.0",
+    "isomorphic-git": "^1.38.3",
     "monaco-editor": "^0.55.1"
   },
   "eslintConfig": {

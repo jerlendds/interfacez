@@ -7,11 +7,18 @@
     "packages/*"
   ],
   "scripts": {
-    "start": "cd packages/desktop/ && npm start"
+    "start": "npm run start --workspace packages/desktop",
+    "package": "npm run package --workspace packages/desktop",
+    "make": "npm run make --workspace packages/desktop",
+    "build": "npm run make --workspace packages/desktop",
+    "publish": "npm run publish --workspace packages/desktop"
   },
   "author": {
     "name": "jerlendds",
     "url": "https://github.com/jerlendds/interfacez"
   },
-  "keywords": ["interfacez"]
+  "keywords": [
+    "interfacez"
+  ],
+  "license": "UNLICENSED"
 }
