@@ -166,17 +166,12 @@
   place-items: center;
   width: 24px;
   height: 24px;
-  border: 1px solid #30344a;
-  border-radius: 5px;
-  background: var(--nb-darkest);
   color: var(--nb-accent-soft);
-  font-size: 11px;
-  font-weight: 800;
 }
 
 .nb-design-nav__icon svg {
-  width: 15px;
-  height: 15px;
+  width: 24px;
+  height: 24px;
 }
 
 .nb-design-nav__label {

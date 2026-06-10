@@ -2,8 +2,10 @@ import type { Component } from "@interfacez/ui";
 import {
   attachTooltip,
   borderRadiusIcon,
+  chevronRightIcon,
   disposable,
   el,
+  html,
   paintIcon,
   render,
   shadowsIcon,
@@ -291,9 +293,8 @@ export const variablesView: Component = {
     );
 
     const page = el("section", "nb-variables");
-    const status = el("p", "nb-variables__status", "Loading variables...");
     const grid = el("div", "nb-token-grid");
-    page.append(createHero(status, scope), grid);
+    page.append(createHero(scope), grid);
     root.replaceChildren(page);
 
     renderTokenGrid(grid, defaultDesignTokens.groups);
@@ -304,6 +305,7 @@ export const variablesView: Component = {
         }>
       ).detail?.groupId;
       if (!groupId) return;
+      collapseAllExcept(page, groupId);
       page
         .querySelector<HTMLElement>(`[data-token-group="${groupId}"]`)
         ?.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -313,18 +315,14 @@ export const variablesView: Component = {
       disposable(() => window.removeEventListener("nb:variables-jump", onJump)),
     );
 
-    void loadTokenDocument().then(({ document, message }) => {
+    void loadTokenDocument().then(({ document }) => {
       if (disposed) return;
       renderTokenGrid(grid, document.groups);
-      status.textContent = message;
     });
   },
 };
 
-function createHero(
-  status: HTMLElement,
-  scope: Parameters<Component["mount"]>[1],
-) {
+function createHero(scope: Parameters<Component["mount"]>[1]) {
   const hero = el("header", "nb-variables__hero");
   const titleRow = el("div", "nb-variables__title-row");
   const info = el("button", "nb-variables__info", "i") as HTMLButtonElement;
@@ -333,23 +331,25 @@ function createHero(
   attachTooltip(
     info,
     {
-      text: "Primitive tokens define what values exist. Semantic tokens explain how values should be used. Component tokens state where a value belongs.",
+      html: html`<strong>Primitive tokens</strong> define what values exist.
+        <strong>Semantic tokens</strong> explain how values should be used.
+        <strong>Component tokens</strong> state where a value belongs.`,
     },
     scope,
   );
-  titleRow.append(el("h1", "", "Variables"), info);
+  titleRow.append(el("h1", "", "Variables"));
+  const intro = el(
+    "p",
+    "nb-variables__intro",
+    "Design tokens are named CSS property values that give designers and developers a shared source of truth.",
+  );
+  intro.append(info);
 
   hero.append(
     el("p", "nb-variables__eyebrow", "Design system"),
     titleRow,
-    el(
-      "p",
-      "nb-variables__intro",
-      "Design tokens are named CSS property values that give designers and developers a shared source of truth. Primitive tokens define what values exist, semantic tokens explain how those values should be used, and component tokens state where a value belongs.",
-    ),
+    intro,
   );
-  status.setAttribute("aria-live", "polite");
-  hero.append(status);
   return hero;
 }
 
@@ -364,23 +364,50 @@ function createTokenCard(group: TokenGroup) {
   const card = el("article", `nb-token-card nb-token-card--${group.id}`);
   card.id = `variables-${group.id}`;
   card.dataset.tokenGroup = group.id;
-  const header = el("header", "nb-token-card__header");
+  const header = el("button", "nb-token-card__header") as HTMLButtonElement;
+  header.type = "button";
+  header.setAttribute("aria-expanded", "true");
+  header.setAttribute("aria-controls", `variables-${group.id}-tokens`);
   const icon = el("div", "nb-token-card__icon");
   render(icon, iconForGroup(group.id));
+  const chevron = el("span", "nb-token-card__chevron");
+  render(chevron, chevronRightIcon);
   header.append(
     icon,
-    el("div", "nb-token-card__title", group.title),
-    el("p", "nb-token-card__description", group.description),
+    el("span", "nb-token-card__title", group.title),
+    el("span", "nb-token-card__description", group.description),
+    chevron,
   );
   card.append(header);
 
   const list = el("div", "nb-token-list");
+  list.id = `variables-${group.id}-tokens`;
   const showTier = new Set(group.tokens.map((token) => token.tier)).size > 1;
   for (const token of group.tokens) {
     list.append(createTokenRow(group.id, token, showTier));
   }
-  card.append(list);
+
+  const contentInner = el("div", "nb-token-card__content-inner");
+  contentInner.append(list);
+  const content = el("div", "nb-token-card__content");
+  content.append(contentInner);
+  card.append(content);
+
+  header.addEventListener("click", () => {
+    const collapsed = card.classList.toggle("is-collapsed");
+    header.setAttribute("aria-expanded", String(!collapsed));
+  });
   return card;
+}
+
+function collapseAllExcept(root: ParentNode, expandedGroupId: string) {
+  for (const card of root.querySelectorAll<HTMLElement>("[data-token-group]")) {
+    const expanded = card.dataset.tokenGroup === expandedGroupId;
+    card.classList.toggle("is-collapsed", !expanded);
+    card
+      .querySelector<HTMLButtonElement>(".nb-token-card__header")
+      ?.setAttribute("aria-expanded", String(expanded));
+  }
 }
 
 function createTokenRow(
@@ -488,7 +515,9 @@ async function saveTokenDocument(document: DesignTokenDocument) {
   await window.spaces.writeDesignTokens(JSON.stringify(document, null, 2));
 }
 
-function cloneTokenDocument(document: DesignTokenDocument): DesignTokenDocument {
+function cloneTokenDocument(
+  document: DesignTokenDocument,
+): DesignTokenDocument {
   return {
     version: 1,
     groups: document.groups.map((group) => ({
