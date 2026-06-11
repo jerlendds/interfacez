@@ -6,6 +6,23 @@ We're not ready for use yet, please return later...
 
 ## Reference Papers
 
+- [BCause: Human-AI collaboration to improve hybrid mapping and ideation in argumentation-grounded deliberation](papers/43_submission.pdf)
+- [Brain Cache: Generative AI as a Cognitive Exoskeleton for Externalizing, Structuring, and Activating Knowledge](papers/genaichi2025_51.pdf)
+- [Designing Support for Human-AI Idea Selection: Human Agency and AI Autonomy](papers/genaichi2025_48.pdf)
+- [Between Threat and Tool: When Users Are Asked To Design Their Competitors](papers/genaichi2025_44.pdf)
+- [Expandora: Broadening Design Exploration with Text-to-Image Model](papers/genaichi2025_41.pdf)
+- [Understanding Designers’ Perceptions of the Usefulness of Generative AI Tools in Creative Design Processes](papers/genaichi2025_36.pdf)
+- [Need Help? Designing Proactive AI Assistants for Programming](papers/genaichi2025_30.pdf)
+- [A Case Study of Scalable Content Annotation Using Multi-LLM Consensus and Human Review](papers/genaichi2025_28.pdf)
+- [LACE: Controlled Image Prompting and Iterative Refinement with GenAI for Professional Visual Art Creators](papers/genaichi2025_17.pdf)
+- [Leveraging Interactive Generative AI for Enhancing Intuitive Learning](papers/genaichi2025_9.pdf)
+- [Investigating Implicit Support for Image Generation Processes](papers/genaichi2025_8.pdf)
+- [Agent Experience: Nielsen’s Usability Heuristics Analysis for GenAI Agents](papers/genaichi2025_5.pdf)
+- [When Do Humans See AI as Humanlike? The Role of Perceived Performance in AI Anthropomorphism ](papers/42_When_Do_Humans_See_AI_as_Humanlike_The_Role_of_Perceived_Performance_in_AI_Anthropomorphism.pdf)
+- [How Individual Traits and Language Styles Shape Preferences In Open-ended User-LLM Interaction](papers/39_Style_Preference___GenAICHI_2025___v1_25.pdf)
+- [Supporting AI-assisted Task Learning with Hierarchical Representation of Procedural Knowledge](<papers/37_CHI25_Workshop_Starlab_(1).pdf>)
+- [From Teacher to Colleague: How Coding Experience Shapes Developer Perceptions of AI Tools](papers/20_GenAICHI___Roles_of_AI.pdf)
+- [EduAcademia: A Comprehensive Integrated Platform for Enhanced Learning](papers/01_EduAcademia-A_Comprehensive_Integrated_Platform_for_Enhanced_Learning.pdf)
 - [A Category Theory Approach to HCI](./papers/001_England-1.pdf)
 - [Ontologies in Human-Computer Interaction: A Systematic Literature Review](./papers/10.3233AO-210255.pdf)
 - [Compiled AI: Deterministic Code Generation for LLM-Based Workflow Automation](./papers/2604.05150v1.pdf)
