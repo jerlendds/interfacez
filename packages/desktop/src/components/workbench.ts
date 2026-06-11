@@ -21,10 +21,10 @@ import {
   getHotkeyManager,
   folderIcon,
   folderOpenIcon,
-  paletteIcon,
   applyComponentTheme,
   el,
   render,
+  variableIcon,
 } from "@interfacez/ui";
 import {
   createMarkdownEditor,
@@ -61,7 +61,7 @@ const defaultActivities = [
   {
     id: "variables",
     label: "Variables",
-    icon: paletteIcon,
+    icon: variableIcon,
     tooltip: "Variables",
   },
 ];
@@ -595,7 +595,6 @@ export function workbench(options: WorkbenchOptions = {}): Component {
           }),
         );
       }
-
     },
   };
 }
@@ -868,12 +867,9 @@ function updateActivityButtons(
       activity === "variables"
         ? isVariablesActive || activity === activeActivity
         : activity === "xplorer"
-        ? isXplorerOpen
-        : activity === activeActivity;
-    item.classList.toggle(
-      "is-active",
-      active,
-    );
+          ? isXplorerOpen
+          : activity === activeActivity;
+    item.classList.toggle("is-active", active);
     if (activity === "xplorer") {
       const icon = item.querySelector("[data-activity-icon='xplorer']");
       if (icon) render(icon, isXplorerOpen ? folderOpenIcon : folderIcon);

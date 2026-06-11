@@ -312,17 +312,19 @@ export const variablesView: Component = {
     );
 
     const page = el("section", "nb-variables");
+    const grid = el("div", "nb-token-grid");
+    const content = el("div", "nb-variables__content");
     const tabs = createVariablesTabs((pageId) => {
       activePage = pageId;
+      content.dataset.activePage = activePage;
       updateVariablesTabs(tabs, activePage);
       renderTokenGrid(grid, tokenGroups, activePage);
     });
-    const grid = el("div", "nb-token-grid");
-    const content = el("div", "nb-variables__content");
     content.append(tabs, grid);
     page.append(createHero(scope), content);
     root.replaceChildren(page);
 
+    content.dataset.activePage = activePage;
     updateVariablesTabs(tabs, activePage);
     renderTokenGrid(grid, tokenGroups, activePage);
 
