@@ -355,7 +355,7 @@ function createHero(scope: Parameters<Component["mount"]>[1]) {
   const intro = el(
     "p",
     "nb-variables__intro",
-    "Design tokens are named CSS property values that give designers and developers a shared source of truth.",
+    "Design variables are named CSS property values that give designers and developers a shared source of truth.",
   );
   intro.append(info);
 

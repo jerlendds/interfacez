@@ -225,7 +225,7 @@ function createWalkthroughs() {
     announcements,
     html`<h2>InterfaceZ Announcements</h2>
       <button class="nb-welcome__link">Local-first Design Spaces</button>
-      <button class="nb-welcome__link">Work with Existing Codebases</button>`,
+      <button class="nb-welcome__link">Working with Existing Code</button>`,
   );
   section.append(announcements);
   return section;
