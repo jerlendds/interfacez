@@ -53,6 +53,12 @@ interface SpaceItem {
   children?: SpaceItem[];
 }
 
+interface MoodboardImage {
+  id: string;
+  name: string;
+  src: string;
+}
+
 interface SpacesApi {
   list: () => Promise<Space[]>;
   selected: () => Promise<Space | undefined>;
@@ -70,6 +76,14 @@ interface SpacesApi {
   renameItem: (itemPath: string, name: string) => Promise<string>;
   deleteItem: (itemPath: string) => Promise<string>;
   writeItem: (itemPath: string, value: string) => Promise<void>;
+  moodboardImages: () => Promise<MoodboardImage[]>;
+  importMoodboardImages: () => Promise<MoodboardImage[]>;
+  importMoodboardFolder: () => Promise<MoodboardImage[]>;
+  pasteMoodboardImage: (payload: {
+    name: string;
+    type: string;
+    data: ArrayBuffer;
+  }) => Promise<MoodboardImage>;
   create: (directoryPath: string) => Promise<Space>;
   select: (directoryPath: string) => Promise<Space>;
 }

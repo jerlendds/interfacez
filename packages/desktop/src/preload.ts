@@ -67,6 +67,30 @@ contextBridge.exposeInMainWorld("spaces", {
     }),
   writeItem: (itemPath: string, value: string) =>
     ipcRenderer.invoke("spaces:writeItem", itemPath, value),
+  moodboardImages: () => ipcRenderer.invoke("spaces:moodboardImages"),
+  importMoodboardImages: () =>
+    ipcRenderer
+      .invoke("spaces:importMoodboardImages")
+      .then((images) => {
+        window.dispatchEvent(new CustomEvent("spaces:changed"));
+        return images;
+      }),
+  importMoodboardFolder: () =>
+    ipcRenderer
+      .invoke("spaces:importMoodboardFolder")
+      .then((images) => {
+        window.dispatchEvent(new CustomEvent("spaces:changed"));
+        return images;
+      }),
+  pasteMoodboardImage: (payload: {
+    name: string;
+    type: string;
+    data: ArrayBuffer;
+  }) =>
+    ipcRenderer.invoke("spaces:pasteMoodboardImage", payload).then((image) => {
+      window.dispatchEvent(new CustomEvent("spaces:changed"));
+      return image;
+    }),
   create: (directoryPath: string) =>
     ipcRenderer.invoke("spaces:create", directoryPath).then((space) => {
       window.dispatchEvent(new CustomEvent("spaces:changed"));

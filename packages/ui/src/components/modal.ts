@@ -3,10 +3,11 @@ import { render, type TrustedHtml } from "../base/html";
 import { xIcon } from "./icons";
 
 export interface ModalOptions {
-  title: string;
+  title?: string;
   description?: string;
   content?: Node | Node[];
   closeLabel?: string;
+  variant?: "bare" | "framed";
   onClose?: () => void;
 }
 
@@ -19,20 +20,32 @@ const modalCloseAnimationMs = 160;
 
 export function createModal(options: ModalOptions): ModalHandle {
   const overlay = el("div", "nb-modal-overlay");
-  const dialog = el("section", "nb-modal");
+  const variant = options.variant ?? "bare";
+  overlay.dataset.modalVariant = variant;
+
+  const dialog = el("section", `nb-modal nb-modal--${variant}`);
   dialog.setAttribute("role", "dialog");
   dialog.setAttribute("aria-modal", "true");
-  dialog.setAttribute("aria-labelledby", "nb-modal-title");
+  if (options.title) dialog.setAttribute("aria-labelledby", "nb-modal-title");
+  else dialog.setAttribute("aria-label", options.closeLabel ?? "Modal");
 
-  const header = el("header", "nb-modal__header");
-  const title = el("h2", "nb-modal__title", options.title);
-  title.id = "nb-modal-title";
   const closeButton = el("button", "nb-modal__close");
   closeButton.type = "button";
   closeButton.setAttribute("aria-label", options.closeLabel ?? "Close modal");
   render(closeButton, xIcon as TrustedHtml);
-  header.append(title, closeButton);
-  dialog.append(header);
+
+  if (options.title || variant === "framed") {
+    const header = el("header", "nb-modal__header");
+    if (options.title) {
+      const title = el("h2", "nb-modal__title", options.title);
+      title.id = "nb-modal-title";
+      header.append(title);
+    }
+    header.append(closeButton);
+    dialog.append(header);
+  } else {
+    dialog.append(closeButton);
+  }
 
   if (options.description) {
     dialog.append(el("p", "nb-modal__description", options.description));

@@ -1,4 +1,5 @@
-import { ipcMain } from "electron";
+import { BrowserWindow, dialog, ipcMain, OpenDialogOptions } from "electron";
+import type { Dirent } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
@@ -21,6 +22,12 @@ export interface SpaceItem {
   kind: "folder" | "file";
   web?: boolean;
   children?: SpaceItem[];
+}
+
+export interface MoodboardImage {
+  id: string;
+  name: string;
+  src: string;
 }
 
 let activeSpacePath: string | undefined;
@@ -230,6 +237,83 @@ export function registerSpacesIpc() {
       await fs.writeFile(resolved, stripWebFileArtifacts(value), "utf8");
     },
   );
+
+  ipcMain.handle("spaces:moodboardImages", async () => {
+    const spacePath = await getActiveSpacePath();
+    if (!spacePath) return [];
+    return listMoodboardImages(spacePath);
+  });
+
+  ipcMain.handle("spaces:importMoodboardImages", async (event) => {
+    const spacePath = await getActiveSpacePath();
+    if (!spacePath) throw new Error("Please select a space");
+
+    const window = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      title: "Import images",
+      properties: [
+        "openFile",
+        "multiSelections",
+      ] as OpenDialogOptions["properties"],
+      filters: [{ name: "Images", extensions: imageDialogExtensions }],
+    };
+    const result = window
+      ? await dialog.showOpenDialog(window, options)
+      : await dialog.showOpenDialog(options);
+    if (result.canceled) return [];
+
+    const imported: MoodboardImage[] = [];
+    for (const filePath of result.filePaths) {
+      if (!isImagePath(filePath)) continue;
+      imported.push(await copyMoodboardImage(spacePath, filePath));
+    }
+    return imported;
+  });
+
+  ipcMain.handle("spaces:importMoodboardFolder", async (event) => {
+    const spacePath = await getActiveSpacePath();
+    if (!spacePath) throw new Error("Please select a space");
+
+    const window = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      title: "Import images folder",
+      properties: ["openDirectory"] as OpenDialogOptions["properties"],
+    };
+    const result = window
+      ? await dialog.showOpenDialog(window, options)
+      : await dialog.showOpenDialog(options);
+    if (result.canceled || !result.filePaths[0]) return [];
+
+    const sourcePaths = await findImagesInFolder(result.filePaths[0]);
+    const imported: MoodboardImage[] = [];
+    for (const filePath of sourcePaths) {
+      imported.push(await copyMoodboardImage(spacePath, filePath));
+    }
+    return imported;
+  });
+
+  ipcMain.handle(
+    "spaces:pasteMoodboardImage",
+    async (
+      _event,
+      payload: { name: string; type: string; data: ArrayBuffer | Uint8Array },
+    ) => {
+      const spacePath = await getActiveSpacePath();
+      if (!spacePath) throw new Error("Please select a space");
+      if (!payload.type.startsWith("image/")) {
+        throw new Error("Only image clipboard items can be pasted.");
+      }
+      const name = moodboardFileName(payload.name, payload.type);
+      const target = await availableMoodboardPath(spacePath, name);
+      await fs.mkdir(path.dirname(target), { recursive: true });
+      const data =
+        payload.data instanceof Uint8Array
+          ? payload.data
+          : new Uint8Array(payload.data);
+      await fs.writeFile(target, data);
+      return moodboardImageFromPath(target);
+    },
+  );
 }
 
 function stripWebFileArtifacts(value: string) {
@@ -256,6 +340,89 @@ function withDisplayPath(space: Space): DisplaySpace {
 
 function designTokenPath(spacePath: string) {
   return path.join(spacePath, ".nb", designTokenFileName);
+}
+
+function moodboardPath(spacePath: string) {
+  return path.join(spacePath, ".moodboard");
+}
+
+async function listMoodboardImages(spacePath: string): Promise<MoodboardImage[]> {
+  const root = moodboardPath(spacePath);
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true });
+  } catch (error) {
+    if (isNotFoundError(error)) return [];
+    throw error;
+  }
+
+  const images = entries
+    .filter((entry) => entry.isFile() && isImagePath(entry.name))
+    .map((entry) => moodboardImageFromPath(path.join(root, entry.name)));
+  return (await Promise.all(images)).sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  );
+}
+
+async function moodboardImageFromPath(filePath: string): Promise<MoodboardImage> {
+  const data = await fs.readFile(filePath);
+  return {
+    id: filePath,
+    name: path.basename(filePath),
+    src: `data:${mimeTypeForPath(filePath)};base64,${data.toString("base64")}`,
+  };
+}
+
+async function copyMoodboardImage(spacePath: string, sourcePath: string) {
+  const target = await availableMoodboardPath(
+    spacePath,
+    path.basename(sourcePath),
+  );
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  await fs.copyFile(sourcePath, target);
+  return moodboardImageFromPath(target);
+}
+
+async function availableMoodboardPath(spacePath: string, name: string) {
+  const root = moodboardPath(spacePath);
+  const cleanName = moodboardFileName(name, mimeTypeForPath(name));
+  const parsed = path.parse(cleanName);
+  let candidate = path.join(root, cleanName);
+  let index = 1;
+
+  while (!(await isPathAvailable(candidate))) {
+    candidate = path.join(root, `${parsed.name} ${index}${parsed.ext}`);
+    index += 1;
+  }
+
+  return candidate;
+}
+
+function moodboardFileName(name: string, mimeType: string) {
+  const fallbackExt = extensionForMimeType(mimeType);
+  const parsed = path.parse(path.basename(name || `image${fallbackExt}`));
+  const ext = parsed.ext || fallbackExt;
+  const base = (parsed.name || "image")
+    .replace(/[^a-zA-Z0-9._ -]+/g, "-")
+    .replace(/^\.+/, "")
+    .trim();
+  return `${base || "image"}${ext}`;
+}
+
+async function findImagesInFolder(folderPath: string): Promise<string[]> {
+  const entries = await fs.readdir(folderPath, { withFileTypes: true });
+  const paths = await Promise.all(
+    entries.map(async (entry): Promise<string[]> => {
+      const entryPath = path.join(folderPath, entry.name);
+      if (entry.isDirectory()) return findImagesInFolder(entryPath);
+      if (entry.isFile() && isImagePath(entryPath)) return [entryPath];
+      return [];
+    }),
+  );
+  return paths.flat().sort((a, b) => a.localeCompare(b));
 }
 
 async function listSpaceItems(spacePath: string): Promise<SpaceItem[]> {
@@ -633,3 +800,50 @@ function mimeTypeForPath(itemPath: string) {
       return "application/octet-stream";
   }
 }
+
+function isImagePath(itemPath: string) {
+  return imageMimeExtensions.has(path.extname(itemPath).toLowerCase());
+}
+
+function extensionForMimeType(mimeType: string) {
+  switch (mimeType) {
+    case "image/apng":
+      return ".apng";
+    case "image/avif":
+      return ".avif";
+    case "image/bmp":
+      return ".bmp";
+    case "image/gif":
+      return ".gif";
+    case "image/jpeg":
+      return ".jpg";
+    case "image/png":
+      return ".png";
+    case "image/svg+xml":
+      return ".svg";
+    case "image/webp":
+      return ".webp";
+    default:
+      return ".png";
+  }
+}
+
+const imageMimeExtensions = new Set([
+  ".apng",
+  ".avif",
+  ".bmp",
+  ".gif",
+  ".ico",
+  ".jfif",
+  ".jpeg",
+  ".jpg",
+  ".pjpeg",
+  ".pjp",
+  ".png",
+  ".svg",
+  ".webp",
+]);
+
+const imageDialogExtensions = [...imageMimeExtensions].map((ext) =>
+  ext.slice(1),
+);

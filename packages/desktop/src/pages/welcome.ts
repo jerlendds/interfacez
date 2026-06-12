@@ -103,6 +103,7 @@ function openCreateSpaceModal() {
   form.append(field, footer);
 
   const modal = createModal({
+    variant: "framed",
     title: "Create a new space",
     description:
       "Select a folder to create a new malleable space of knowledge. Any files in this folder will be included in your space.",

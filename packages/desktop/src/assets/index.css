@@ -11,6 +11,7 @@
 @import "web-file-editor.css";
 @import "welcome.css";
 @import "variables.css";
+@import "moodboard.css";
 
 :root {
   --nb-toolbar-height: 32px;

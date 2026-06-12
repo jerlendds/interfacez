@@ -24,6 +24,7 @@ import {
   applyComponentTheme,
   el,
   render,
+  maskTheaterIcon,
   variableIcon,
 } from "@interfacez/ui";
 import {
@@ -31,6 +32,7 @@ import {
   gfmMarkdownOptions,
 } from "@interfacez/editor-markdown";
 import { variablesView } from "../pages/variables";
+import { moodboardView } from "../pages/moodboard";
 import { shouldShowWelcomeOnStartup, welcomeView } from "../pages/welcome";
 import type { ActivityItem, SidebarSide } from "./sidebar";
 import { createSidebar } from "./sidebar";
@@ -63,6 +65,12 @@ const defaultActivities = [
     label: "Variables",
     icon: variableIcon,
     tooltip: "Variables",
+  },
+  {
+    id: "moodboard",
+    label: "Moodboard",
+    icon: maskTheaterIcon,
+    tooltip: "Moodboard",
   },
 ];
 
@@ -181,6 +189,7 @@ export function workbench(options: WorkbenchOptions = {}): Component {
             activeActivity.get(),
             isXplorerOpen.get(),
             isVariablesActive(layout.get()),
+            isMoodboardActive(layout.get()),
           );
         }),
       );
@@ -197,6 +206,9 @@ export function workbench(options: WorkbenchOptions = {}): Component {
           }
           if (activity === "variables") {
             openVariablesTab();
+          }
+          if (activity === "moodboard") {
+            openMoodboardTab();
           }
           activeActivity.set(activity);
         }),
@@ -247,6 +259,7 @@ export function workbench(options: WorkbenchOptions = {}): Component {
             activeActivity.get(),
             isXplorerOpen.get(),
             isVariablesActive(layout.get()),
+            isMoodboardActive(layout.get()),
           );
         }),
       );
@@ -262,6 +275,7 @@ export function workbench(options: WorkbenchOptions = {}): Component {
             activeActivity.get(),
             open,
             isVariablesActive(layout.get()),
+            isMoodboardActive(layout.get()),
           );
         }),
       );
@@ -595,6 +609,52 @@ export function workbench(options: WorkbenchOptions = {}): Component {
           }),
         );
       }
+
+      function openMoodboardTab() {
+        const currentLayout = layout.get();
+        const stackId = findActiveStackId(currentLayout);
+        if (!stackId) return;
+
+        const existing = currentLayout.tabs.moodboard;
+        if (existing) {
+          const existingStackId =
+            findStackContainingTab(currentLayout, "moodboard") ?? stackId;
+          layout.set(
+            applyLayoutTransaction(currentLayout, {
+              type: "activateTab",
+              stackId: existingStackId,
+              tabId: "moodboard",
+            }),
+          );
+          return;
+        }
+
+        layout.set(
+          applyLayoutTransaction(currentLayout, {
+            type: "openTab",
+            stackId,
+            tab: {
+              id: "moodboard",
+              title: "Moodboard",
+              resource: "iz://moodboard",
+              page: "page:moodboard",
+              closable: true,
+            },
+            page: {
+              kind: "content",
+              id: "page:moodboard",
+              contentId: "content:moodboard",
+            },
+            content: {
+              id: "content:moodboard",
+              kind: "plugin:moodboard",
+              resource: "iz://moodboard",
+              view: moodboardView,
+            },
+            activate: true,
+          }),
+        );
+      }
     },
   };
 }
@@ -838,6 +898,12 @@ function isVariablesActive(doc: LayoutDocument) {
   });
 }
 
+function isMoodboardActive(doc: LayoutDocument) {
+  return Object.values(doc.nodes).some((node) => {
+    return node.kind === "stack" && node.activeTabId === "moodboard";
+  });
+}
+
 function findFirstStack(
   doc: LayoutDocument,
   nodeId: LayoutNodeId,
@@ -860,15 +926,18 @@ function updateActivityButtons(
   activeActivity: string,
   isXplorerOpen: boolean,
   isVariablesActive: boolean,
+  isMoodboardActive: boolean,
 ) {
   for (const item of root.querySelectorAll("[data-activity]")) {
     const activity = item.getAttribute("data-activity");
     const active =
       activity === "variables"
         ? isVariablesActive || activity === activeActivity
-        : activity === "xplorer"
-          ? isXplorerOpen
-          : activity === activeActivity;
+        : activity === "moodboard"
+          ? isMoodboardActive || activity === activeActivity
+          : activity === "xplorer"
+            ? isXplorerOpen
+            : activity === activeActivity;
     item.classList.toggle("is-active", active);
     if (activity === "xplorer") {
       const icon = item.querySelector("[data-activity-icon='xplorer']");

@@ -17,15 +17,25 @@
 }
 
 .nb-modal {
-  width: min(520px, calc(100vw - 48px));
+  position: relative;
+  width: auto;
   max-height: calc(100vh - 128px);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  animation: nb-modal-in 160ms ease-out;
+  transform-origin: center;
+}
+
+.nb-modal--framed {
+  width: min(520px, calc(100vw - 48px));
   overflow: auto;
   border: 1px solid var(--nb-dark);
   border-radius: 6px;
   background: var(--nb-darkest);
   box-shadow: 0 24px 72px rgba(0, 0, 0, 0.42);
-  animation: nb-modal-in 160ms ease-out;
-  transform-origin: center;
 }
 
 .nb-modal-overlay--closing .nb-modal {
@@ -60,6 +70,15 @@
   color: var(--nb-muted);
 }
 
+.nb-modal--bare > .nb-modal__close {
+  position: absolute;
+  top: -34px;
+  right: 0;
+  border: 1px solid var(--nb-dark);
+  background: var(--nb-darkest);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
 .nb-modal__close:hover {
   background: var(--nb-dark);
   color: var(--nb-bright);
@@ -78,6 +97,10 @@
 }
 
 .nb-modal__body {
+  padding: 0;
+}
+
+.nb-modal--framed .nb-modal__body {
   padding: 20px;
 }
 
