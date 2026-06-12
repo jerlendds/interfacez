@@ -224,10 +224,8 @@ function createWalkthroughs() {
   render(
     announcements,
     html`<h2>InterfaceZ Announcements</h2>
-      <button class="nb-welcome__link">Local-first resource graphs</button>
-      <button class="nb-welcome__link">
-        Transactions, facets, and plugins
-      </button>`,
+      <button class="nb-welcome__link">Local-first Design Spaces</button>
+      <button class="nb-welcome__link">Work with Existing Codebases</button>`,
   );
   section.append(announcements);
   return section;
