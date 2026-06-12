@@ -1,7 +1,5 @@
 # interfacez
 
-<!-- The last "design compiler" you'll need to design user interfacez.  -->
-
 We're not ready for use yet, please return later...
 
 ## Reference Papers
